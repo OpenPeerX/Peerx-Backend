@@ -7,6 +7,7 @@ import { CacheWarmingConfig, CacheWarmingMetrics, WarmingStrategyResult } from '
 import { Balance } from '../../balance/balance.entity';
 import { MarketData } from '../../trading/entities/market-data.entity';
 import { PortfolioService } from '../../portfolio/portfolio.service';
+import { ConfigService as AppConfigService } from '../../config/config.service';
 
 @Injectable()
 export class CacheWarmingService implements OnApplicationBootstrap {
@@ -23,6 +24,7 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   constructor(
     private readonly configService: ConfigService,
     private readonly cacheService: CacheService,
+    private readonly appConfigService: AppConfigService,
     @InjectRepository(Balance)
     @Optional()
     private readonly balanceRepository?: Repository<Balance>,
@@ -69,14 +71,11 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   }
 
   private getWarmingConfig(): CacheWarmingConfig {
+    const cacheConfig = this.appConfigService.cache;
     return {
-      enabled: this.configService.get<boolean>('cache.warming.enabled', false),
-      timeout: this.configService.get<number>('cache.warming.timeout', 30000),
-      strategies: this.configService.get<string[]>('cache.warming.strategies', [
-        'user_balances',
-        'market_data',
-        'portfolio'
-      ])
+      enabled: cacheConfig.warming?.enabled || false,
+      timeout: cacheConfig.warming?.timeout || 30000,
+      strategies: cacheConfig.warming?.strategies || ['user_balances', 'market_data', 'portfolio']
     };
   }
 
