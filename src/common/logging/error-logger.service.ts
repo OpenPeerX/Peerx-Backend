@@ -2,6 +2,7 @@ import { Injectable, Inject, Optional } from '@nestjs/common';
 import { Request } from 'express';
 import { LoggerService } from './logger_service';
 import { categorizeError, getErrorDetails, ErrorCategory } from '../exceptions/error-codes';
+import { ConfigService } from '../../config/config.service';
 
 export interface ErrorLog {
   timestamp: string;
@@ -31,6 +32,7 @@ export class ErrorLoggerService {
   constructor(
     @Optional() @Inject('LoggerService')
     private readonly logger?: LoggerService,
+    private readonly configService?: ConfigService,
   ) {}
 
   /**
@@ -123,7 +125,7 @@ export class ErrorLoggerService {
       url: request?.url || 'UNKNOWN',
       userId,
       correlationId,
-      stack: process.env.NODE_ENV !== 'production' ? stack : undefined,
+      stack: !this.configService?.isProduction() ? stack : undefined,
       request: {
         headers: this.sanitizeHeaders(request?.headers),
         body: this.sanitizeBody(request?.body),
@@ -170,7 +172,7 @@ export class ErrorLoggerService {
       });
 
       // In production, send alert to monitoring service
-      if (process.env.NODE_ENV === 'production') {
+      if (this.configService?.isProduction()) {
         // TODO: Integrate with alerting service (PagerDuty, Slack, etc.)
       }
     }

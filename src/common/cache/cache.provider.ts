@@ -1,20 +1,16 @@
-import { ConfigService } from '@nestjs/config';
+import { ConfigService } from '../../config/config.service';
 import * as redisStoreFactory from 'cache-manager-redis-store';
 
 export async function redisStore(configService: ConfigService) {
-  const host = configService.get<string>('cache.redis.host', 'localhost');
-  const port = configService.get<number>('cache.redis.port', 6379);
-  const username = configService.get<string>('cache.redis.username');
-  const password = configService.get<string>('cache.redis.password');
-  const db = configService.get<number>('cache.redis.db', 0);
+  const redisConfig = configService.redis;
 
   return {
     store: redisStoreFactory,
-    host,
-    port,
-    username,
-    password,
-    db,
+    host: redisConfig.host,
+    port: redisConfig.port,
+    username: redisConfig.username,
+    password: redisConfig.password,
+    db: redisConfig.db,
     // Add options for better performance
     retry_strategy: (options: any) => {
       if (options.error && options.error.code === 'ECONNREFUSED') {

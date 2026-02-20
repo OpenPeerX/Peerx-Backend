@@ -9,6 +9,7 @@ import { CacheController } from './cache.controller';
 import { CacheService } from '../services/cache.service';
 import { Balance } from '../../balance/balance.entity';
 import { MarketData } from '../../trading/entities/market-data.entity';
+import { ConfigService as AppConfigService } from '../../config/config.service';
 
 @Module({
   imports: [
@@ -17,10 +18,10 @@ import { MarketData } from '../../trading/entities/market-data.entity';
     NestCacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => {
-        return await redisStore(configService);
+      useFactory: async (configService: ConfigService, appConfigService: AppConfigService) => {
+        return await redisStore(appConfigService);
       },
-      inject: [ConfigService],
+      inject: [ConfigService, AppConfigService],
     }),
   ],
   controllers: [CacheController],
