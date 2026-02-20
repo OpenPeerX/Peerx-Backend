@@ -94,36 +94,6 @@ export class RedisConfig {
   maxRetriesPerRequest?: number = 3;
 }
 
-export class CacheConfig {
-  @IsBoolean()
-  @IsOptional()
-  enabled: boolean = true;
-
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  ttl: number = 300; // 5 minutes default
-
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  maxItems: number = 1000;
-
-  @ValidateNested()
-  @Type(() => CacheTtlConfig)
-  @IsOptional()
-  ttlConfig?: CacheTtlConfig;
-
-  @ValidateNested()
-  @Type(() => CacheWarmingConfig)
-  @IsOptional()
-  warming?: CacheWarmingConfig;
-
-  @ValidateNested()
-  @Type(() => RedisConfig)
-  redis: RedisConfig = new RedisConfig();
-}
-
 export class CacheTtlConfig {
   @IsNumber()
   @Min(0)
@@ -162,6 +132,36 @@ export class CacheWarmingConfig {
   @IsString({ each: true })
   @IsOptional()
   strategies: string[] = ['user_balances', 'market_data', 'portfolio'];
+}
+
+export class CacheConfig {
+  @IsBoolean()
+  @IsOptional()
+  enabled: boolean = true;
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  ttl: number = 300; // 5 minutes default
+
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  maxItems: number = 1000;
+
+  @ValidateNested()
+  @Type(() => CacheTtlConfig)
+  @IsOptional()
+  ttlConfig?: CacheTtlConfig;
+
+  @ValidateNested()
+  @Type(() => CacheWarmingConfig)
+  @IsOptional()
+  warming?: CacheWarmingConfig;
+
+  @ValidateNested()
+  @Type(() => RedisConfig)
+  redis: RedisConfig = new RedisConfig();
 }
 
 export class QueueConfig {
