@@ -149,14 +149,8 @@ export class CacheConfig {
   @IsOptional()
   maxItems: number = 1000;
 
-  @ValidateNested()
-  @Type(() => CacheTtlConfig)
-  @IsOptional()
   ttlConfig?: CacheTtlConfig;
 
-  @ValidateNested()
-  @Type(() => CacheWarmingConfig)
-  @IsOptional()
   warming?: CacheWarmingConfig;
 
   @ValidateNested()
