@@ -4,6 +4,8 @@ import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ConfigService } from './config.service';
 import { configSchema } from './config.schema';
+import { ConfigDocumentationGenerator } from './config-documentation.generator';
+import { ConfigAuditService } from './config-audit.service';
 
 @Global()
 @Module({
@@ -19,7 +21,7 @@ import { configSchema } from './config.schema';
       },
     }),
   ],
-  providers: [ConfigService],
-  exports: [ConfigService],
+  providers: [ConfigService, ConfigDocumentationGenerator, ConfigAuditService],
+  exports: [ConfigService, ConfigDocumentationGenerator, ConfigAuditService],
 })
 export class ConfigModule {}
