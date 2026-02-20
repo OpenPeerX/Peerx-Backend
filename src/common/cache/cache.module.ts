@@ -10,6 +10,9 @@ import { CacheService } from '../services/cache.service';
 import { Balance } from '../../balance/balance.entity';
 import { MarketData } from '../../trading/entities/market-data.entity';
 import { ConfigService as AppConfigService } from '../../config/config.service';
+import { RedisPoolService } from './redis-pool.service';
+import { RedisMetricsService } from './redis-metrics.service';
+import { createRedisPooledStore } from './redis-pooled-store';
 
 @Module({
   imports: [
@@ -18,14 +21,26 @@ import { ConfigService as AppConfigService } from '../../config/config.service';
     NestCacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService, appConfigService: AppConfigService) => {
+      useFactory: async (
+        _configService: ConfigService,
+        appConfigService: AppConfigService,
+        poolService: RedisPoolService,
+        metricsService: RedisMetricsService,
+      ) => {
+        const usePool =
+          (appConfigService.redis.poolMin ?? 0) > 0 && (appConfigService.redis.poolMax ?? 0) > 0;
+        if (usePool) {
+          const store = createRedisPooledStore(poolService, metricsService, appConfigService);
+          const ttl = (appConfigService.cache?.ttl ?? 300) * 1000;
+          return { store, ttl };
+        }
         return await redisStore(appConfigService);
       },
-      inject: [ConfigService, AppConfigService],
+      inject: [ConfigService, AppConfigService, RedisPoolService, RedisMetricsService],
     }),
   ],
   controllers: [CacheController],
-  providers: [CacheService, CacheWarmingService],
-  exports: [NestCacheModule, CacheService, CacheWarmingService],
+  providers: [RedisMetricsService, RedisPoolService, CacheService, CacheWarmingService],
+  exports: [NestCacheModule, CacheService, CacheWarmingService, RedisPoolService, RedisMetricsService],
 })
 export class CustomCacheModule {}

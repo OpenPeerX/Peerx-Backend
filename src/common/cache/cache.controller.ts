@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { Controller, Get, Post, Optional } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CacheWarmingService } from './cache-warming.service';
 import { CacheService } from '../services/cache.service';
 import type { CacheWarmingMetrics, CacheHitMissMetrics } from './interfaces/cache-warming.interface';
+import { RedisPoolService } from './redis-pool.service';
+import { RedisMetricsService, RedisMetricsSnapshot } from './redis-metrics.service';
 
 @ApiTags('Cache')
 @Controller('cache')
@@ -10,6 +12,8 @@ export class CacheController {
   constructor(
     private readonly cacheWarmingService: CacheWarmingService,
     private readonly cacheService: CacheService,
+    @Optional() private readonly redisPoolService?: RedisPoolService,
+    @Optional() private readonly redisMetricsService?: RedisMetricsService,
   ) {}
 
   @Get('warming/metrics')
@@ -56,6 +60,26 @@ export class CacheController {
   })
   async forceWarmCache(): Promise<CacheWarmingMetrics> {
     return await this.cacheWarmingService.forceWarmCache();
+  }
+
+  @Get('redis/metrics')
+  @ApiOperation({ summary: 'Get Redis connection pool and retry metrics (Prometheus-style)' })
+  @ApiResponse({ status: 200, description: 'Redis pool utilization and retry rates' })
+  getRedisMetrics(): RedisMetricsSnapshot | { enabled: false } {
+    if (!this.redisMetricsService || !this.redisPoolService) {
+      return { enabled: false };
+    }
+    return this.redisMetricsService.getSnapshot();
+  }
+
+  @Get('redis/pool')
+  @ApiOperation({ summary: 'Get Redis connection pool metrics' })
+  @ApiResponse({ status: 200, description: 'Pool size, available, in use, retries' })
+  getRedisPoolMetrics(): ReturnType<RedisPoolService['getMetrics']> | { enabled: false } {
+    if (!this.redisPoolService) {
+      return { enabled: false } as any;
+    }
+    return this.redisPoolService.getMetrics();
   }
 
   @Get('metrics')
