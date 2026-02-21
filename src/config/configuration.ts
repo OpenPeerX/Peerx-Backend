@@ -92,6 +92,48 @@ export class RedisConfig {
   @Min(0)
   @IsOptional()
   maxRetriesPerRequest?: number = 3;
+
+  /** Connection pool: minimum number of connections to keep open */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  poolMin?: number = 2;
+
+  /** Connection pool: maximum number of connections */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  poolMax?: number = 10;
+
+  /** Adaptive backoff: base delay in ms for exponential backoff */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  backoffBaseMs?: number = 100;
+
+  /** Adaptive backoff: max delay in ms */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  backoffMaxMs?: number = 30000;
+
+  /** Adaptive backoff: max number of retry attempts */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  backoffMaxAttempts?: number = 10;
+
+  /** Circuit breaker: failures before opening */
+  @IsNumber()
+  @Min(1)
+  @IsOptional()
+  circuitBreakerThreshold?: number = 5;
+
+  /** Circuit breaker: ms before half-open */
+  @IsNumber()
+  @Min(1000)
+  @IsOptional()
+  circuitBreakerResetMs?: number = 60000;
 }
 
 export class CacheTtlConfig {
