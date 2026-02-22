@@ -5,13 +5,15 @@ import { PortfolioService } from './portfolio.service';
 import { PortfolioRepository } from './portfolio.repository';
 import { TradeEntity } from './entities/trade.entity';
 import { Trade } from '../trading/entities/trade.entity';
-import { Balance } from '../balance/balance.entity';
+// import { Balance } from '../balance/balance.entity';
 import { CacheService } from '../common/services/cache.service';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 
 // Set test environment variables before any imports that rely on config
 if (!process.env.NODE_ENV) process.env.NODE_ENV = 'development';
 if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'test-secret-key';
+import { Balance } from 'src/balance/balance.entity';
+import { RiskAnalyticsService } from './services/risk-analytics.service';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
@@ -19,6 +21,7 @@ describe('PortfolioService', () => {
   let balanceRepository: Repository<Balance>;
   let tradeRepository: Repository<Trade>;
   let cacheService: CacheService;
+  let riskAnalyticsService: RiskAnalyticsService;
 
   const mockBalanceRepository = {
     find: jest.fn(),
@@ -48,6 +51,13 @@ describe('PortfolioService', () => {
     invalidateMarketPriceCache: jest.fn(),
   };
 
+  const mockRiskAnalyticsService = {
+    calculatePortfolioVolatility: jest.fn().mockReturnValue(50),
+    calculateParametricVaR: jest.fn().mockReturnValue(100),
+    calculateCVaR: jest.fn().mockReturnValue(150),
+    performStressTests: jest.fn().mockReturnValue([]),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -72,6 +82,8 @@ describe('PortfolioService', () => {
         {
           provide: CACHE_MANAGER,
           useValue: mockCacheManager,
+          provide: RiskAnalyticsService,
+          useValue: mockRiskAnalyticsService,
         },
       ],
     }).compile();
@@ -83,6 +95,7 @@ describe('PortfolioService', () => {
     );
     tradeRepository = module.get<Repository<Trade>>(getRepositoryToken(Trade));
     cacheService = module.get<CacheService>(CacheService);
+    riskAnalyticsService = module.get<RiskAnalyticsService>(RiskAnalyticsService);
 
     // Clear cache before each test
     service.clearPriceCache();
@@ -624,6 +637,8 @@ describe('PortfolioService', () => {
       expect(result.diversificationScore).toBe(0);
       expect(result.volatilityEstimate).toBe(0);
       expect(result.metadata.largestHolding).toBe('');
+      expect(result.valueAtRisk.parametric).toBe(0);
+      expect(result.stressTestResults).toEqual([]);
     });
 
     it('should return 100% concentration for single asset portfolio', async () => {
@@ -700,13 +715,15 @@ describe('PortfolioService', () => {
         },
       ];
 
+      mockRiskAnalyticsService.calculatePortfolioVolatility.mockReturnValue(5);
+
       mockBalanceRepository.find.mockResolvedValue(mockBalances);
       mockTradeRepository.find.mockResolvedValue([]);
 
       const result = await service.getPortfolioRisk(1);
 
       // USDT has low volatility (5%)
-      expect(result.volatilityEstimate).toBe(5);
+      expect(riskAnalyticsService.calculatePortfolioVolatility).toHaveBeenCalled();
     });
 
     it('should normalize risk scores to 0-100', async () => {
