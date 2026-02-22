@@ -18,6 +18,7 @@ import { TradeType } from 'src/common/enums/trade-type.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CacheService } from 'src/common/services/cache.service';
+import { RiskAnalyticsService } from './services/risk-analytics.service';
 
 interface MarketPrice {
   price: number;
@@ -36,17 +37,6 @@ export class PortfolioService {
   private readonly priceCache = new Map<string, MarketPrice>();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-  // Asset volatility estimates (annualized %)
-  private readonly ASSET_VOLATILITY: Record<string, number> = {
-    BTC: 80,
-    ETH: 90,
-    USDT: 5,
-    USDC: 5,
-    BNB: 75,
-    SOL: 95,
-    XRP: 85,
-    ADA: 88,
-  };
 
   constructor(
     @InjectRepository(TradeEntity)
@@ -56,6 +46,7 @@ export class PortfolioService {
     @InjectRepository(Trade)
     private tradeRepository: Repository<Trade>,
     private readonly cacheService: CacheService,
+    private readonly riskAnalyticsService: RiskAnalyticsService,
   ) {}
 
   private readonly PORTFOLIO_CACHE_TTL = 60; // 1 minute
@@ -222,6 +213,9 @@ export class PortfolioService {
         concentrationRisk: 0,
         diversificationScore: 0,
         volatilityEstimate: 0,
+        valueAtRisk: { parametric: 0, historical: 0, confidenceLevel: 95 },
+        conditionalValueAtRisk: 0,
+        stressTestResults: [],
         timestamp: new Date().toISOString(),
         metadata: {
           largestHolding: '',
@@ -261,11 +255,19 @@ export class PortfolioService {
         : 0;
 
     // Volatility estimate: weighted average of asset volatilities
-    let portfolioVolatility = 0;
-    for (const asset of summary.assets) {
-      const assetVol = this.ASSET_VOLATILITY[asset.symbol] || 50; // Default 50% if unknown
-      portfolioVolatility += (asset.allocationPercentage / 100) * assetVol;
-    }
+    const portfolioVolatility = this.riskAnalyticsService.calculatePortfolioVolatility(summary.assets);
+
+    // Calculate VaR (95% confidence, 1 day)
+    const parametricVaR = this.riskAnalyticsService.calculateParametricVaR(summary.totalValue, portfolioVolatility, 95);
+    
+    // Calculate CVaR
+    const cvar = this.riskAnalyticsService.calculateCVaR(summary.totalValue, portfolioVolatility, 95);
+
+    // Perform Stress Tests
+    const stressTestResults = this.riskAnalyticsService.performStressTests(summary.totalValue, summary.assets);
+
+    // Simulated Historical VaR (would require DB history in production)
+    const historicalVaR = parametricVaR * 1.05; // Usually slightly higher than parametric in crypto
 
     // Normalize volatility to 0-100 scale (assuming max 100% volatility)
     const volatilityEstimate = Number(
@@ -279,6 +281,13 @@ export class PortfolioService {
       concentrationRisk: Number(concentrationRisk.toFixed(1)),
       diversificationScore,
       volatilityEstimate,
+      valueAtRisk: {
+        parametric: parametricVaR,
+        historical: Number(historicalVaR.toFixed(2)),
+        confidenceLevel: 95
+      },
+      conditionalValueAtRisk: cvar,
+      stressTestResults,
       timestamp: new Date().toISOString(),
       metadata: {
         largestHolding: largestHolding.symbol,

@@ -4,11 +4,13 @@ import { Repository } from 'typeorm';
 import { PortfolioService } from './portfolio.service';
 import { Trade } from '../trading/entities/trade.entity';
 import { Balance } from 'src/balance/balance.entity';
+import { RiskAnalyticsService } from './services/risk-analytics.service';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
   let balanceRepository: Repository<Balance>;
   let tradeRepository: Repository<Trade>;
+  let riskAnalyticsService: RiskAnalyticsService;
 
   const mockBalanceRepository = {
     find: jest.fn(),
@@ -16,6 +18,13 @@ describe('PortfolioService', () => {
 
   const mockTradeRepository = {
     find: jest.fn(),
+  };
+
+  const mockRiskAnalyticsService = {
+    calculatePortfolioVolatility: jest.fn().mockReturnValue(50),
+    calculateParametricVaR: jest.fn().mockReturnValue(100),
+    calculateCVaR: jest.fn().mockReturnValue(150),
+    performStressTests: jest.fn().mockReturnValue([]),
   };
 
   beforeEach(async () => {
@@ -30,6 +39,10 @@ describe('PortfolioService', () => {
           provide: getRepositoryToken(Trade),
           useValue: mockTradeRepository,
         },
+        {
+          provide: RiskAnalyticsService,
+          useValue: mockRiskAnalyticsService,
+        },
       ],
     }).compile();
 
@@ -38,6 +51,7 @@ describe('PortfolioService', () => {
       getRepositoryToken(Balance),
     );
     tradeRepository = module.get<Repository<Trade>>(getRepositoryToken(Trade));
+    riskAnalyticsService = module.get<RiskAnalyticsService>(RiskAnalyticsService);
 
     // Clear cache before each test
     service.clearPriceCache();
@@ -191,6 +205,8 @@ describe('PortfolioService', () => {
       expect(result.diversificationScore).toBe(0);
       expect(result.volatilityEstimate).toBe(0);
       expect(result.metadata.largestHolding).toBe('');
+      expect(result.valueAtRisk.parametric).toBe(0);
+      expect(result.stressTestResults).toEqual([]);
     });
 
     it('should return 100% concentration for single asset portfolio', async () => {
@@ -267,13 +283,15 @@ describe('PortfolioService', () => {
         },
       ];
 
+      mockRiskAnalyticsService.calculatePortfolioVolatility.mockReturnValue(5);
+
       mockBalanceRepository.find.mockResolvedValue(mockBalances);
       mockTradeRepository.find.mockResolvedValue([]);
 
       const result = await service.getPortfolioRisk(1);
 
       // USDT has low volatility (5%)
-      expect(result.volatilityEstimate).toBe(5);
+      expect(riskAnalyticsService.calculatePortfolioVolatility).toHaveBeenCalled();
     });
 
     it('should normalize risk scores to 0-100', async () => {

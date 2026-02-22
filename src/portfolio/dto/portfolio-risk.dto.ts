@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsISO8601, Min, Max } from 'class-validator';
+import { IsNumber, IsISO8601, Min, Max, ValidateNested, IsString, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
 import { IsAssetType } from '../../common/validation';
 
 export class PortfolioRiskMetadataDto {
@@ -23,6 +24,42 @@ export class PortfolioRiskMetadataDto {
   @IsNumber()
   @Min(1)
   effectiveAssets: number;
+}
+
+export class VaRMetricsDto {
+  @ApiProperty({ example: 1250.50, description: 'Parametric Value at Risk (95% confidence)' })
+  @IsNumber()
+  parametric: number;
+
+  @ApiProperty({ example: 1300.75, description: 'Historical Value at Risk (95% confidence)' })
+  @IsNumber()
+  historical: number;
+
+  @ApiProperty({ example: 95, description: 'Confidence level for VaR calculation' })
+  @IsNumber()
+  confidenceLevel: number;
+}
+
+export class StressTestResultDto {
+  @ApiProperty({ example: 'Crypto Winter' })
+  @IsString()
+  scenarioName: string;
+
+  @ApiProperty({ example: 'Major market crash across all crypto assets' })
+  @IsString()
+  description: string;
+
+  @ApiProperty({ example: -25000.00 })
+  @IsNumber()
+  projectedPnL: number;
+
+  @ApiProperty({ example: 22500.00 })
+  @IsNumber()
+  projectedValue: number;
+
+  @ApiProperty({ example: -52.5 })
+  @IsNumber()
+  percentageChange: number;
 }
 
 export class PortfolioRiskDto {
@@ -58,6 +95,21 @@ export class PortfolioRiskDto {
   @ApiProperty({ example: '2026-01-22T10:30:00Z' })
   @IsISO8601()
   timestamp: string;
+
+  @ApiProperty({ type: VaRMetricsDto })
+  @ValidateNested()
+  @Type(() => VaRMetricsDto)
+  valueAtRisk: VaRMetricsDto;
+
+  @ApiProperty({ example: 1500.00, description: 'Conditional Value at Risk (Expected Shortfall)' })
+  @IsNumber()
+  conditionalValueAtRisk: number;
+
+  @ApiProperty({ type: [StressTestResultDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => StressTestResultDto)
+  stressTestResults: StressTestResultDto[];
 
   @ApiProperty({
     example: {
