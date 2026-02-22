@@ -3,6 +3,7 @@ import { Request } from 'express';
 import { LoggerService } from './logger_service';
 import { categorizeError, getErrorDetails, ErrorCategory } from '../exceptions/error-codes';
 import { ConfigService } from '../../config/config.service';
+import { AuditLoggerService } from './audit-logger.service';
 
 export interface ErrorLog {
   timestamp: string;
@@ -33,6 +34,7 @@ export class ErrorLoggerService {
     @Optional() @Inject('LoggerService')
     private readonly logger?: LoggerService,
     private readonly configService?: ConfigService,
+    @Optional() private readonly auditLogger?: AuditLoggerService,
   ) {}
 
   /**
@@ -80,6 +82,18 @@ export class ErrorLoggerService {
       // Alert on critical errors
       if (this.isCriticalError(statusCode)) {
         this.alertCriticalError(errorLog);
+      }
+
+      // Audit critical security errors
+      if (this.auditLogger && (statusCode === 401 || statusCode === 403 || statusCode >= 500)) {
+        this.auditLogger.log({
+          action: 'SYSTEM_ERROR',
+          resource: 'SYSTEM',
+          status: 'FAILURE',
+          metadata: { errorCode, statusCode, message: errorLog.message },
+          userId: errorLog.userId,
+          ip: (request as any)?.ip
+        }).catch(e => console.error('Failed to audit error', e));
       }
     } catch (loggingError) {
       console.error('Error while logging error:', loggingError);
