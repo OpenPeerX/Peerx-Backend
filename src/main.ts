@@ -2,13 +2,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
 import { QueueService } from './queue/queue.service';
 import { QueueMonitoringService } from './queue/queue-monitoring.service';
 import { validateMigrations } from './database/migrations/migration.guard';
 import { AppDataSource } from './database/data-source';
 import { ErrorLoggerService } from './common/logging/error-logger.service';
 import { ConfigService } from './config/config.service';
+import { SanitizationPipe } from './common/validation/sanitization.pipe';
+import { ComplexityGuard } from './common/validation/complexity.guard';
+import { RateLimitMiddleware } from './common/middleware/rate-limit.middleware';
 
 // Import rate limiting middleware (will be available after npm install)
 // import { rateLimitMiddleware } from './ratelimit/ratelimit.middleware';
@@ -29,6 +32,18 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       disableErrorMessages: false, // Keep error messages for validation feedback
       errorHttpStatusCode: 400, // Set default error status code for validation errors
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => ({
+          field: error.property,
+          errors: Object.values(error.constraints || {}),
+          remediation: `Please correct the ${error.property} field based on the validation rules.`,
+        }));
+        return new BadRequestException({
+          message: 'Validation failed',
+          errors: messages,
+          timestamp: new Date().toISOString(),
+        });
+      },
     }),
   );
 
@@ -40,14 +55,16 @@ async function bootstrap() {
     allowedHeaders: configService.app.cors?.allowedHeaders || ['Content-Type', 'Authorization'],
   });
 
-  // TODO: Uncomment and configure rate limiting middleware after installing dependencies
-  /*
-  app.use((req, res, next) => {
-    // This is where rate limiting middleware will be applied
-    // rateLimitMiddleware.use(req, res, next);
-    next(); // Temporary bypass until dependencies are installed
-  });
-  */
+  // Apply global sanitization pipe
+  app.useGlobalPipes(new SanitizationPipe());
+
+  // Apply global complexity guard
+  app.useGlobalGuards(new ComplexityGuard());
+
+  // Apply rate limiting middleware
+  const rateLimitMiddleware = new RateLimitMiddleware();
+  app.use(rateLimitMiddleware.use.bind(rateLimitMiddleware));
+
 
   // Swagger configuration
   const config = new DocumentBuilder()

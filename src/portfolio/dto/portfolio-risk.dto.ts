@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNumber, IsISO8601, Min, Max, ValidateNested, IsString, IsArray } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsAssetType } from '../../common/validation';
+import { IsAssetSymbol } from '../../common/validation/custom-validators';
 
 export class PortfolioRiskMetadataDto {
   @ApiProperty({ example: 'BTC' })
-  @IsAssetType()
+  @IsAssetSymbol()
   largestHolding: string;
   
   @ApiProperty({ example: 75.5 })
