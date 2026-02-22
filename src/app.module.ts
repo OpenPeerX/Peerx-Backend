@@ -29,9 +29,9 @@ import { QueueModule } from './queue/queue.module';
 import { CustomCacheModule } from './common/cache/cache.module';
 import { ConfigModule } from './config/config.module';
 import { MetricsModule } from './metrics/metrics.module';
-
-// ── Services / providers ──────────────────────────────────────────────────────
-import { ConfigService } from './config/config.service';
+import { RateLimitModule } from './ratelimit/ratelimit.module';
+import { MetricsInterceptor } from './metrics/metrics.interceptor';
+import { MetricsTypeOrmLogger } from './metrics/typeorm-logger';
 import { MetricsService } from './metrics/metrics.service';
 import { MetricsTypeOrmLogger } from './metrics/typeorm-logger';
 import { ErrorLoggerService } from './common/logging/error-logger.service';
@@ -118,6 +118,8 @@ import { MetricsInterceptor } from './metrics/metrics.interceptor';
 
     // ── Feature modules ───────────────────────────────────────────────────────
     AuthModule,
+    // Distributed rate limiting
+    RateLimitModule,
     PortfolioModule,
     TradingModule,
     UserModule,
