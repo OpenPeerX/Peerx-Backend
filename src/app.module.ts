@@ -31,6 +31,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { MetricsTypeOrmLogger } from './metrics/typeorm-logger';
 import { MetricsService } from './metrics/metrics.service';
+import { BlockchainModule } from './blockchain/blockchain.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { MetricsService } from './metrics/metrics.service';
     SwapModule,
     TutorialModule,
     PerformanceModule,
+    BlockchainModule,
   ],
   controllers: [AppController],
   providers: [

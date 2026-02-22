@@ -10,6 +10,8 @@ import { Repository, DataSource } from 'typeorm';
 import { Balance } from '../balance/balance.entity';
 import { VirtualAsset } from '../trading/entities/virtual-asset.entity';
 import { CreateSwapDto } from './dto/create-swap.dto';
+import { Web3Service, ChainId } from '../blockchain/web3.service';
+import { WalletService } from '../blockchain/wallet.service';
 
 @Injectable()
 export class SwapService {
@@ -19,6 +21,8 @@ export class SwapService {
     private readonly balanceRepo: Repository<Balance>,
     @InjectRepository(VirtualAsset)
     private readonly assetRepo: Repository<VirtualAsset>,
+    private readonly web3Service: Web3Service,
+    private readonly walletService: WalletService,
   ) {}
 
   /**
@@ -139,5 +143,23 @@ export class SwapService {
         to: { asset: toSymbol, balance: updatedToBalance.balance },
       };
     });
+  }
+
+  /**
+   * Execute an on-chain swap (Placeholder implementation)
+   */
+  async executeOnChainSwap(userId: string, fromToken: string, toToken: string, amount: number): Promise<string> {
+    // In a real implementation, this would:
+    // 1. Look up the user's derived wallet index
+    // 2. Interact with a DEX router contract (Uniswap/PancakeSwap)
+    // 3. Execute the swap transaction
+    
+    // For now, we simulate a transaction hash
+    const chainId = ChainId.LOCALHOST;
+    // Ensure provider is available
+    this.web3Service.getProvider(chainId);
+    
+    // Simulate interaction
+    return '0x' + Array(64).fill('0').map(() => Math.floor(Math.random() * 16).toString(16)).join('');
   }
 }
