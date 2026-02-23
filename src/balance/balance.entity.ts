@@ -1,6 +1,16 @@
-import { Entity, Column, PrimaryGeneratedColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 
-@Entity('balances')
+@Entity('Balance')
+@Index(['userId'])
+@Index(['asset'])
+@Index(['userId', 'asset'])
 export class Balance {
   @PrimaryGeneratedColumn()
   id: number;
@@ -9,9 +19,13 @@ export class Balance {
   @Column()
   userId: string;
 
+  @Index()
   @Column()
   asset: string;
 
   @Column('float')
   balance: number;
+
+  @Column(`float`)
+  available: number;
 }
