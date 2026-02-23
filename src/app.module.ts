@@ -16,6 +16,7 @@ import { SwapModule } from './swap/swap.module';
 
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TutorialModule } from './tutorial/tutorial.module';
+import { GqlAppModule } from './graphql/graphql.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { TutorialModule } from './tutorial/tutorial.module';
     BalanceModule,
     SwapModule,
     TutorialModule,
+    GqlAppModule,
   ],
   controllers: [AppController],
   providers: [AppService],
