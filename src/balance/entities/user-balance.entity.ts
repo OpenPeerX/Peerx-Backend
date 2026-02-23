@@ -12,7 +12,7 @@ import {
 import { User } from '../../user/entities/user.entity';
 import { VirtualAsset } from '../../trading/entities/virtual-asset.entity';
 
-@Entity('user_balances')
+@Entity('Balance')
 @Unique(['userId', 'assetId'])
 export class UserBalance {
   @PrimaryGeneratedColumn()
@@ -36,6 +36,12 @@ export class UserBalance {
   @ManyToOne(() => VirtualAsset)
   @JoinColumn({ name: 'assetId' })
   asset: VirtualAsset;
+
+  @Column('decimal', { precision: 18, scale: 8, default: 0 })
+  total: number;
+
+  @Column('decimal', { precision: 18, scale: 8, default: 0 })
+  reserved: number;
 
   @CreateDateColumn()
   createdAt: Date;
