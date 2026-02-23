@@ -1,50 +1,34 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { Body, Controller, Post, ValidationPipe } from '@nestjs/common';
 import { TradingService } from './trading.service';
 import { CreateTradeDto } from './dto/create-trade.dto';
-import { CreateOrderDto } from './dto/create-order.dto';
-import { OrderType } from '../common/enums/order-type.enum';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+} from '@nestjs/swagger';
 
+@ApiTags('trading')
 @Controller('trading')
 export class TradingController {
   constructor(private readonly tradingService: TradingService) {}
 
   @Post('swap')
-  async swap(@Body() createTradeDto: CreateTradeDto) {
-    return this.tradingService.swap(
-      createTradeDto.userId,
-      createTradeDto.asset,
-      createTradeDto.amount,
-      createTradeDto.price,
-      createTradeDto.type,
-    );
-  }
-
-  @Post('order')
-  async placeOrder(@Body() createOrderDto: CreateOrderDto) {
-    return this.tradingService.placeOrder(
-      createOrderDto.userId,
-      createOrderDto.asset,
-      createOrderDto.type,
-      createOrderDto.amount,
-      createOrderDto.price,
-    );
-  }
-
-  @Get('order-book/:asset')
-  async getOrderBook(@Param('asset') asset: string) {
-    return this.tradingService.getOrderBook(asset);
-  }
-
-  @Post('order/:orderId/cancel/:userId')
-  async cancelOrder(
-    @Param('orderId') orderId: number,
-    @Param('userId') userId: number,
+  @ApiOperation({ summary: 'Execute a trade and update portfolio stats' })
+  @ApiResponse({ status: 201, description: 'Trade executed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid trade parameters' })
+  @ApiBody({ type: CreateTradeDto })
+  async swap(
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    )
+    body: CreateTradeDto,
   ) {
-    return this.tradingService.cancelOrder(orderId, userId);
-  }
-
-  @Post('order/:orderId/execute')
-  async executeOrder(@Param('orderId') orderId: number) {
-    return this.tradingService.executeOrder(orderId);
+    const { userId, asset, amount, price, type } = body;
+    return this.tradingService.swap(userId, asset, amount, price, type);
   }
 }
