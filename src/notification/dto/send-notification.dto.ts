@@ -1,21 +1,26 @@
-import { IsNumber, IsString, IsEnum, MaxLength, MinLength } from 'class-validator';
-import { NotificationStatus } from '../../common/enums/notification-status.enum';
-import { IsUserId } from '../../common/validation';
+import { IsNumber, IsString, IsEnum, IsOptional, IsArray } from 'class-validator';
+import { NotificationChannel } from '../entities/notification.entity';
 
 export class SendNotificationDto {
-  @IsUserId()
+  @IsNumber()
   userId: number;
 
   @IsString()
-  @MinLength(1)
-  @MaxLength(50)
   type: string;
 
   @IsString()
-  @MinLength(1)
-  @MaxLength(500)
   message: string;
 
-  @IsEnum(NotificationStatus)
-  status: NotificationStatus;
+  @IsOptional()
+  @IsString()
+  subject?: string;
+
+  @IsOptional()
+  @IsString()
+  templateKey?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(NotificationChannel, { each: true })
+  channels?: NotificationChannel[];
 }

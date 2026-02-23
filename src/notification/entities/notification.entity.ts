@@ -1,4 +1,3 @@
-// src/notification/entities/notification.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,9 +8,14 @@ import {
 } from 'typeorm';
 import { NotificationStatus } from '../../common/enums/notification-status.enum';
 
-@Entity('notifications')
-@Index(['userId', 'read'])
-@Index(['userId', 'createdAt'])
+export enum NotificationChannel {
+  Email = 'EMAIL',
+  Sms = 'SMS',
+  InApp = 'IN_APP',
+  Push = 'PUSH',
+}
+
+@Entity()
 export class Notification {
   @PrimaryGeneratedColumn()
   id: number;
@@ -23,39 +27,32 @@ export class Notification {
   @Column()
   type: string;
 
-  @Column({ nullable: true })
-  title: string;
+  @Column({ type: 'simple-array' })
+  channels: NotificationChannel[];
 
-  @Column('text')
+  @Column({ nullable: true })
+  subject: string | null;
+
+  @Column()
   message: string;
 
-  @Column({ type: 'varchar', default: 'UNREAD' })
+  @Column({ type: 'enum', enum: NotificationStatus, default: NotificationStatus.SENT })
   status: NotificationStatus;
 
-  @Column({ default: false })
-  read: boolean;
-
-  @Column({ type: 'timestamp', nullable: true })
-
-  readAt: Date;
-
-  @Column('simple-json', { nullable: true })
-  data: Record<string, any>;
+  @Column({ type: 'simple-json', nullable: true })
+  metadata: Record<string, unknown> | null;
 
   @Column({ nullable: true })
-  priority: string;
-
-  @Column({ nullable: true })
-  actionUrl: string;
-
-  @Column({ default: false })
-  sent: boolean;
+  templateKey: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  sentAt: Date;
+  deliveredAt: Date | null;
 
-  expiresAt: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  readAt: Date | null;
 
+  @Column({ type: 'text', nullable: true })
+  lastError: string | null;
 
   @CreateDateColumn()
   createdAt: Date;

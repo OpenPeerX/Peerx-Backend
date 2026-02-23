@@ -1,34 +1,34 @@
-import { Entity, PrimaryGeneratedColumn, Column, Unique } from 'typeorm';
-import { NotificationFrequency } from './user-notification-preferences.entity';
+import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
+import { NotificationChannel } from './notification.entity';
 
-@Entity('notification_preferences')
-@Unique(['userId'])
+@Entity()
 export class NotificationPreference {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column()
+  @Index()
   userId: number;
 
-  @Column({ default: true })
-  orderFilled: boolean;
+  @Column()
+  @Index()
+  type: string;
+
+  @Column({ type: 'enum', enum: NotificationChannel })
+  channel: NotificationChannel;
 
   @Column({ default: true })
-  priceAlerts: boolean;
+  enabled: boolean;
 
-  @Column({ default: true })
-  achievementUnlocked: boolean;
+  @Column({ nullable: true })
+  unsubscribeToken: string | null;
 
-  
-  // Add the missing frequency field
-  @Column({
-    type: 'enum',
-    enum: NotificationFrequency,
-    default: NotificationFrequency.INSTANT,
-  })
-  frequency: NotificationFrequency;
+  @Column({ type: 'int', default: 0 })
+  dailyLimit: number;
 
-  // Add the missing channels field (assuming it's an array of strings)
-  @Column('simple-array', { default: 'in-app,email' })
-  channels: string[];
+  @Column({ type: 'int', default: 0 })
+  sentToday: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  lastSentAt: Date | null;
 }
