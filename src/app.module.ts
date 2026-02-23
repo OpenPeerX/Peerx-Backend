@@ -33,13 +33,6 @@ import { RateLimitModule } from './ratelimit/ratelimit.module';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { MetricsTypeOrmLogger } from './metrics/typeorm-logger';
 import { MetricsService } from './metrics/metrics.service';
-import { MetricsTypeOrmLogger } from './metrics/typeorm-logger';
-import { ErrorLoggerService } from './common/logging/error-logger.service';
-
-// ── Filters / interceptors ────────────────────────────────────────────────────
-import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
-import { AdvancedCacheInterceptor } from './common/interceptors/advanced-cache.interceptor';
-import { MetricsInterceptor } from './metrics/metrics.interceptor';
 
 @Module({
   imports: [
@@ -132,6 +125,7 @@ import { MetricsInterceptor } from './metrics/metrics.interceptor';
     SwapModule,
     TutorialModule,
     PerformanceModule,
+    BlockchainModule,
   ],
 
   controllers: [AppController],

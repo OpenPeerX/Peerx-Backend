@@ -17,37 +17,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Balance } from '../balance/balance.entity';
 import { VirtualAsset } from '../trading/entities/virtual-asset.entity';
 import { CreateSwapDto } from './dto/create-swap.dto';
-import { BatchSwapDto, BatchSwapResponseDto } from './dto/batch-swap.dto';
-import {
-  SwapHistoryQueryDto,
-  SwapHistoryResponseDto,
-  SwapHistoryEntryDto,
-} from './dto/swap-history.dto';
-import { SwapHistory, SwapStatus, SwapType } from './entities/swap-history.entity';
-import { SwapPricingService } from './swap-pricing.service';
-import { SwapSettlementService } from './swap-settlement.service';
-import { SwapSagaService } from './swap-saga.service';
-import { QueueService } from '../queue/queue.service';
 
-// ── Shared response shape (backward-compatible with existing callers) ─────────
-
-export interface SwapResult {
-  userId: string;
-  from: { asset: string; balance: number };
-  to: { asset: string; balance: number };
-}
-
-export interface AsyncSwapResult {
-  swapId: string;
-  jobId: string;
-  status: SwapStatus;
-  quotedRate: number;
-  estimatedAmountOut: number;
-  priceImpact: number;
-  slippageTolerance: number;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class SwapService {
@@ -62,12 +32,7 @@ export class SwapService {
     private readonly balanceRepo: Repository<Balance>,
     @InjectRepository(VirtualAsset)
     private readonly assetRepo: Repository<VirtualAsset>,
-    @InjectRepository(SwapHistory)
-    private readonly swapHistoryRepo: Repository<SwapHistory>,
-    private readonly pricingService: SwapPricingService,
-    private readonly settlementService: SwapSettlementService,
-    private readonly sagaService: SwapSagaService,
-    private readonly queueService: QueueService,
+
   ) {}
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -400,79 +365,3 @@ export class SwapService {
     };
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // Private — multi-leg saga
-  // ──────────────────────────────────────────────────────────────────────────
-
-  private async executeMultiLegSwap(
-    userId: string,
-    route: string[],
-    amount: number,
-    slippageTolerance: number,
-  ): Promise<AsyncSwapResult> {
-    const batchId = uuidv4();
-
-    const job = await this.queueService.addMultiLegSwapJob({
-      type: 'multi_leg',
-      batchId,
-      userId,
-      route,
-      amountIn: amount,
-      slippageTolerance,
-    });
-
-    // Get quote for the full route to return an estimate
-    const quote = await this.pricingService.getQuote(
-      route[0],
-      route[route.length - 1],
-      amount,
-    );
-
-    return {
-      swapId: batchId,
-      jobId: String(job.id),
-      status: SwapStatus.PENDING,
-      quotedRate: quote.rate,
-      estimatedAmountOut: quote.amountOut,
-      priceImpact: quote.priceImpact,
-      slippageTolerance,
-    };
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Validation helpers
-  // ──────────────────────────────────────────────────────────────────────────
-
-  private validateSwapRequest(dto: CreateSwapDto): void {
-    if (dto.from === dto.to) {
-      throw new BadRequestException('from and to must be different tokens');
-    }
-    if (dto.amount <= 0) {
-      throw new BadRequestException('amount must be greater than 0');
-    }
-    if (
-      dto.slippageTolerance !== undefined &&
-      (dto.slippageTolerance < 0 || dto.slippageTolerance > 0.5)
-    ) {
-      throw new BadRequestException(
-        'slippageTolerance must be between 0 and 0.5 (50%)',
-      );
-    }
-    if (dto.route) {
-      if (dto.route[0] !== dto.from || dto.route[dto.route.length - 1] !== dto.to) {
-        throw new BadRequestException(
-          'route must start with from asset and end with to asset',
-        );
-      }
-    }
-  }
-
-  private async assertAssetsExist(from: string, to: string): Promise<void> {
-    const [fromAsset, toAsset] = await Promise.all([
-      this.assetRepo.findOne({ where: { symbol: from } }),
-      this.assetRepo.findOne({ where: { symbol: to } }),
-    ]);
-    if (!fromAsset) throw new NotFoundException(`Unsupported token: ${from}`);
-    if (!toAsset)   throw new NotFoundException(`Unsupported token: ${to}`);
-  }
-}
