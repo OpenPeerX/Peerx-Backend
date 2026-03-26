@@ -18,6 +18,9 @@ export class TutorialProgress {
   @Column({ default: false })
   isCompleted: boolean;
 
+  @Column({ nullable: true, type: 'int', default: null })
+  quizScore?: number;
+
   @Column({ nullable: true })
   rewardClaimedAt?: Date;
 }
