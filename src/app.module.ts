@@ -21,6 +21,7 @@ import { TutorialModule } from './tutorial/tutorial.module';
 import { GqlAppModule } from './graphql/graphql.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { AlertModule } from './alerts/alert.module';
+import { ReferralModule } from './referral/referral.module';
 
 @Module({
   imports: [
@@ -51,4 +52,4 @@ import { AlertModule } from './alerts/alert.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

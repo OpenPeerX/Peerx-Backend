@@ -7,4 +7,4 @@ import { WalletService } from './wallet.service';
   providers: [Web3Service, WalletService],
   exports: [Web3Service, WalletService],
 })
-export class BlockchainModule {}
+export class BlockchainModule { }
