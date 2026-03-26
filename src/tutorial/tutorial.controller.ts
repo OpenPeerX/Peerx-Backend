@@ -17,9 +17,14 @@ export class TutorialController {
   }
 
   @Patch(':id/progress')
-  async updateProgress(@Req() req, @Param('id') tutorialId: string, @Body('step') step: number) {
+  async updateProgress(
+    @Req() req,
+    @Param('id') tutorialId: string,
+    @Body('step') step: number,
+    @Body('quizScore') quizScore?: number,
+  ) {
     const userId = req.user.id;
-    return this.tutorialService.updateProgress(userId, tutorialId, step);
+    return this.tutorialService.updateProgress(userId, tutorialId, step, quizScore);
   }
 
   @Get(':id/progress')
