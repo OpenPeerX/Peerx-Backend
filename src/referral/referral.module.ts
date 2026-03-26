@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ReferralService } from './referral.service';
-import { Module } from '@nestjs/common';
-import { NotificationModule } from '../notification/notification.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from '../user/entities/user.entity';
 import { ReferralService } from './referral.service';
-import { FraudPreventionService } from './fraud-prevention.service';
+import { ReferralController } from './referral.controller';
+import { Referral } from './entities/referral.entity';
+import { User } from '../user/entities/user.entity';
 
 @Module({
-    imports: [NotificationModule, TypeOrmModule.forFeature([User])],
-    providers: [ReferralService, FraudPreventionService],
-    exports: [ReferralService, FraudPreventionService],
+  imports: [
+    TypeOrmModule.forFeature([Referral, User]),
+  ],
+  controllers: [ReferralController],
+  providers: [ReferralService],
+  exports: [ReferralService],
 })
-export class ReferralModule { }
-
+export class ReferralModule {}
