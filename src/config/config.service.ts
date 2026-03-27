@@ -20,6 +20,8 @@ import {
   SwaggerConfig,
   FeatureFlags,
   Environment,
+  StellarConfig,
+  ExchangeConfig,
 } from './configuration';
 
 @Injectable()
@@ -179,6 +181,13 @@ export class ConfigService implements OnModuleInit {
         enablePerformanceMonitoring: this.nestConfigService.get<boolean>('FEATURE_PERFORMANCE_MONITORING', true),
         enableErrorTracking: this.nestConfigService.get<boolean>('FEATURE_ERROR_TRACKING', true),
       },
+      stellar: {
+        horizonUrl: this.nestConfigService.get<string>('STELLAR_HORIZON_URL'),
+        usdcIssuer: this.nestConfigService.get<string>('STELLAR_USDC_ISSUER'),
+      },
+      exchange: {
+        url: this.nestConfigService.get<string>('EXCHANGE_RATE_URL'),
+      },
       vaultUrl: this.nestConfigService.get<string>('VAULT_URL'),
       vaultToken: this.nestConfigService.get<string>('VAULT_TOKEN'),
       useVault: this.nestConfigService.get<boolean>('USE_VAULT', false),
@@ -292,6 +301,14 @@ export class ConfigService implements OnModuleInit {
 
   get vaultUrl(): string | undefined {
     return this.config.vaultUrl;
+  }
+
+  get stellar(): StellarConfig {
+    return this.config.stellar;
+  }
+
+  get exchange(): ExchangeConfig {
+    return this.config.exchange;
   }
 
   get vaultToken(): string | undefined {

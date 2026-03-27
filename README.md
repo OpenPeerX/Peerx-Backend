@@ -59,6 +59,9 @@ Copy `.env.example` to `.env` and configure the following key settings:
 #### Required Variables
 - `JWT_SECRET`: Secret key for JWT token signing (change in production)
 - `DB_NAME`: Database name
+- `EXCHANGE_RATE_URL`: URL for the exchange rate service
+- `STELLAR_HORIZON_URL`: URL for the Stellar Horizon service (testnet/public)
+- `STELLAR_USDC_ISSUER`: Issuer address for USDC on Stellar blockchain
 
 #### Optional Variables
 - `NODE_ENV`: Environment (development/staging/production)

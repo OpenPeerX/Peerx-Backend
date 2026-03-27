@@ -439,6 +439,19 @@ export class AppConfig {
   logging?: LoggingConfig;
 }
 
+export class StellarConfig {
+  @IsString()
+  horizonUrl: string;
+
+  @IsString()
+  usdcIssuer: string;
+}
+
+export class ExchangeConfig {
+  @IsString()
+  url: string;
+}
+
 export class Configuration {
   @ValidateNested()
   @Type(() => AppConfig)
@@ -473,6 +486,14 @@ export class Configuration {
   @Type(() => FeatureFlags)
   @IsOptional()
   features?: FeatureFlags = new FeatureFlags();
+
+  @ValidateNested()
+  @Type(() => StellarConfig)
+  stellar: StellarConfig;
+
+  @ValidateNested()
+  @Type(() => ExchangeConfig)
+  exchange: ExchangeConfig;
 
   // Vault/secrets configuration
   @IsString()
