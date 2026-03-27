@@ -9,6 +9,8 @@ import { CleanupJobProcessor } from './processors/cleanup.processor';
 import { QueueService } from './queue.service';
 import { QueueMonitoringService } from './queue-monitoring.service';
 import { SchedulerService } from './scheduler.service';
+import { SchedulerFailoverService } from './scheduler-failover.service';
+import { SchedulerController } from './scheduler.controller';
 import { ExponentialBackoffService } from './exponential-backoff.service';
 import { DeadLetterQueueService } from './dead-letter-queue.service';
 import { QueueAnalyticsService } from './queue-analytics.service';
@@ -106,7 +108,7 @@ import { QueueName } from './queue.constants';
     UserModule,
     forwardRef(() => TradingModule),
   ],
-  controllers: [QueueController, QueueAdminController],
+  controllers: [QueueController, QueueAdminController, SchedulerController],
   providers: [
     NotificationJobProcessor,
     EmailJobProcessor,
@@ -115,6 +117,7 @@ import { QueueName } from './queue.constants';
     QueueService,
     QueueMonitoringService,
     SchedulerService,
+    SchedulerFailoverService,
     ExponentialBackoffService,
     DeadLetterQueueService,
     QueueAnalyticsService,
@@ -125,6 +128,8 @@ import { QueueName } from './queue.constants';
     ExponentialBackoffService,
     DeadLetterQueueService,
     QueueAnalyticsService,
+    SchedulerService,
+    SchedulerFailoverService,
   ],
 })
 export class QueueModule {}

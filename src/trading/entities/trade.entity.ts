@@ -5,8 +5,6 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   Index,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 
 export enum TradeStatus {
@@ -74,6 +72,15 @@ export class Trade {
 
   @CreateDateColumn()
   timestamp: Date;
+
+  @Column({ type: 'varchar', nullable: true })
+  settlementStatus: string;
+
+  @Column({ nullable: true })
+  settlementTxHash: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  settledAt: Date;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;

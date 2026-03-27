@@ -2,10 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Trade, TradeStatus } from './entities/trade.entity';
-import { BlockchainModule, Web3Service, WalletService } from '../portfolio/dto/blockchain.module';
+import { Web3Service } from '../portfolio/dto/web3.service';
+import { WalletService } from '../portfolio/dto/wallet.service';
 import { ethers } from 'ethers';
 
-const SETTLEMENT_ABI = ['function settleTrade(uint tradeId, address buyer, address seller, uint amount, address token)'];
+const SETTLEMENT_ABI = [
+    'function settleTrade(uint256 tradeId, address buyer, address seller, uint256 amount, address token) external',
+    'event TradeSettled(uint256 tradeId, address buyer, address seller, uint256 amount, address token)'
+];
 
 @Injectable()
 export class SettlementService {
