@@ -8,6 +8,7 @@ import { MarketDataController } from './market-data.controller';
 import { MarketDataService } from './market-data.service';
 import { ExchangeRateService } from './services/exchange-rate.service';
 import { ExchangeRateController } from './exchange-rate.controller';
+import { StellarService } from './stellar.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { ExchangeRateController } from './exchange-rate.controller';
     ScheduleModule.forRoot(),
   ],
   controllers: [MarketDataController, ExchangeRateController],
-  providers: [MarketDataService, ExchangeRateService],
-  exports: [MarketDataService, ExchangeRateService],
+  providers: [MarketDataService, ExchangeRateService, StellarService],
+  exports: [MarketDataService, ExchangeRateService, StellarService],
 })
 export class MarketDataModule {}
