@@ -6,6 +6,8 @@ import { CustomCacheModule } from '../common/cache/cache.module';
 import { CommonModule } from '../common/common.module';
 import { MarketDataController } from './market-data.controller';
 import { MarketDataService } from './market-data.service';
+import { ExchangeRateService } from './services/exchange-rate.service';
+import { ExchangeRateController } from './exchange-rate.controller';
 
 @Module({
   imports: [
@@ -14,8 +16,8 @@ import { MarketDataService } from './market-data.service';
     CommonModule,
     ScheduleModule.forRoot(),
   ],
-  controllers: [MarketDataController],
-  providers: [MarketDataService],
-  exports: [MarketDataService],
+  controllers: [MarketDataController, ExchangeRateController],
+  providers: [MarketDataService, ExchangeRateService],
+  exports: [MarketDataService, ExchangeRateService],
 })
 export class MarketDataModule {}
