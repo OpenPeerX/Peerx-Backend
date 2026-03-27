@@ -17,6 +17,17 @@ export interface QueueMetrics {
   successRate: number;
 }
 
+export interface ScheduledTaskMetrics {
+  taskName: string;
+  lastExecution?: Date;
+  nextExecution?: Date;
+  status: 'scheduled' | 'running' | 'completed' | 'failed';
+  lastDuration?: number;
+  lastError?: string;
+  executionCount: number;
+  failureCount: number;
+}
+
 export interface JobMetrics {
   jobId: string;
   queueName: string;
@@ -349,5 +360,77 @@ export class QueueMonitoringService {
       default:
         throw new Error(`Unknown queue: ${queueName}`);
     }
+  }
+
+  // ==================== Scheduled Task Tracking ====================
+
+  private scheduledTaskMetrics: Map<string, ScheduledTaskMetrics> = new Map();
+
+  recordScheduledTaskExecution(
+    taskName: string,
+    status: 'completed' | 'failed',
+    duration?: number,
+    error?: string,
+  ): void {
+    const metrics = this.scheduledTaskMetrics.get(taskName) || {
+      taskName,
+      status: 'scheduled',
+      executionCount: 0,
+      failureCount: 0,
+    };
+
+    metrics.lastExecution = new Date();
+    metrics.status = status;
+    metrics.executionCount++;
+
+    if (duration !== undefined) {
+      metrics.lastDuration = duration;
+    }
+
+    if (error) {
+      metrics.lastError = error;
+      metrics.failureCount++;
+    }
+
+    this.scheduledTaskMetrics.set(taskName, metrics);
+
+    this.logger.debug(
+      `Recorded scheduled task ${taskName}: ${status} (${duration}ms)`,
+    );
+  }
+
+  getScheduledTaskMetrics(taskName?: string): ScheduledTaskMetrics[] | ScheduledTaskMetrics {
+    if (taskName) {
+      return this.scheduledTaskMetrics.get(taskName) || {
+        taskName,
+        status: 'scheduled',
+        executionCount: 0,
+        failureCount: 0,
+      };
+    }
+
+    return Array.from(this.scheduledTaskMetrics.values());
+  }
+
+  getAllScheduledTasksSummary(): any {
+    const tasks = Array.from(this.scheduledTaskMetrics.values());
+    const totalExecutions = tasks.reduce((sum, t) => sum + t.executionCount, 0);
+    const totalFailures = tasks.reduce((sum, t) => sum + t.failureCount, 0);
+
+    return {
+      totalTasks: tasks.length,
+      totalExecutions,
+      totalFailures,
+      successRate: totalExecutions > 0 
+        ? ((totalExecutions - totalFailures) / totalExecutions * 100).toFixed(2) + '%'
+        : 'N/A',
+      tasks: tasks.map(t => ({
+        name: t.taskName,
+        lastExecution: t.lastExecution?.toISOString(),
+        status: t.status,
+        lastDuration: t.lastDuration,
+        failureCount: t.failureCount,
+      })),
+    };
   }
 }

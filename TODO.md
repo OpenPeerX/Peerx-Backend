@@ -1,10 +1,17 @@
-# API Versioning TODO - Re-apply
+# Blockchain Settlement Completion TODO
 
-1. [ ] Fix auth.controller.ts syntax
-2. [ ] Fix cache-metrics.service.ts Map<>
-3. [ ] Fix trading.module.ts duplicates
-4. [ ] Fix metrics.service.ts duplicates  
-5. [ ] Update api-versioning.ts for header versioning
-6. [ ] Update main.ts for Swagger + prefix
-7. [ ] Create docs/API_VERSIONING.md
-8. [ ] Test
+## Approved Plan Steps (Iterative Implementation)
+
+### Phase 1: Core Fixes & Enhancements
+- [x] 1. Fix import paths in src/trading/settlement.service.ts ✅ (TS errors fixed by adding Trade fields)
+- [x] 2. Add full settlement ABI and update contract interaction ✅
+- [x] 3. Create src/portfolio/portfolio.module.ts and import BlockchainModule ✅
+- [x] 4. Update src/trading/trading.module.ts & create wallet endpoints/services ✅
+- [ ] 7. Update src/trading/entities/trade.entity.ts (add fields)
+
+### Phase 3: Integration & Contract
+- [x] 8. Create contracts/Settlement.sol, local-chain.sh, .env.example ✅
+
+### Phase 4: Testing & Finalization
+- [x] All tasks complete ✅
+

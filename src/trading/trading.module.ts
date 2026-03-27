@@ -10,7 +10,7 @@ import { UserModule } from '../user/user.module';
 import { NotificationModule } from '../notification/notification.module';
 import { CacheModule } from '../common/cache/cache.module';
 import { MatchingEngineModule } from './matching-engine/matching-engine.module';
-import { BlockchainModule } from '../portfolio/dto/blockchain.module';
+import { PortfolioModule } from '../portfolio/portfolio.module';
 import { Trade } from './entities/trade.entity';
 import { VirtualAsset } from './entities/virtual-asset.entity';
 import { OrderBook } from './entities/order-book.entity';

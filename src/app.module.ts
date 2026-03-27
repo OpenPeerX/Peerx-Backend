@@ -48,6 +48,7 @@ import { ReferralModule } from './referral/referral.module';
     ExportModule,
     AuditLogModule,
     AlertModule,
+    ReferralModule,
   ],
   controllers: [AppController],
   providers: [AppService],
