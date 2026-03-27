@@ -1,21 +1,51 @@
-// src/queue/scheduler.service.ts
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { QueueService } from './queue.service';
+import { QueueMonitoringService } from './queue-monitoring.service';
+import { QueueAnalyticsService } from './queue-analytics.service';
+import { CacheWarmingService } from '../common/cache/cache-warming.service';
+import { QueueName } from './queue.constants';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
 
-  constructor(private readonly queueService: QueueService) {}
+  constructor(
+    private readonly queueService: QueueService,
+    private readonly queueMonitoring: QueueMonitoringService,
+    private readonly queueAnalytics: QueueAnalyticsService,
+    private readonly cacheWarming: CacheWarmingService,
+  ) {}
+
+  private async recordTaskExecution(
+    taskName: string,
+    startTime: number,
+    error?: Error,
+  ): Promise<void> {
+    const duration = Date.now() - startTime;
+    this.queueMonitoring.recordScheduledTaskExecution(
+      taskName,
+      error ? 'failed' : 'completed',
+      duration,
+      error?.message,
+    );
+  }
 
   onModuleInit() {
     this.logger.log('Scheduler service initialized');
     this.logger.log('Scheduled jobs:');
+    this.logger.log('  - Cache warming: Every 30 minutes');
     this.logger.log('  - Daily reports: 2:00 AM');
     this.logger.log('  - Weekly cleanup: Sunday 3:00 AM');
     this.logger.log('  - Hourly temp file cleanup: Every hour');
     this.logger.log('  - Session cleanup: Every 30 minutes');
+    this.logger.log('  - Portfolio optimization: Daily at 1:00 AM');
+    this.logger.log('  - Queue health check: Every 5 minutes');
+  }
+
+  onModuleDestroy() {
+    this.logger.log('Scheduler service shutting down...');
   }
 
   // ==================== Daily Reports (2 AM) ====================
@@ -68,6 +98,15 @@ export class SchedulerService implements OnModuleInit {
         type: 'temp_files',
         olderThan: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         batchSize: 1000,
+      });
+
+      // Generate weekly performance report
+      await this.queueService.addReportJob({
+        reportType: 'weekly',
+        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        endDate: new Date(),
+        format: 'pdf',
+        email: process.env.ADMIN_EMAIL || 'admin@swaptrade.com',
       });
 
       this.logger.log('Weekly cleanup jobs scheduled successfully');
@@ -151,7 +190,79 @@ export class SchedulerService implements OnModuleInit {
     }
   }
 
-  // ==================== Health Check Notifications (Every 5 minutes) ====================
+  // ==================== Cache Warming (Every 30 minutes) ====================
+
+  @Cron('*/30 * * * *', {
+    name: 'cache-warming',
+  })
+  async performCacheWarming(): Promise<void> {
+    this.logger.debug('Running scheduled cache warming');
+    const startTime = Date.now();
+
+    try {
+      const warmingResult = await this.cacheWarming.forceWarmCache();
+      
+      this.logger.log(
+        `Cache warming completed: ${warmingResult.totalKeysWarmed} keys warmed, ` +
+        `${warmingResult.successCount} successful, ${warmingResult.failureCount} failed`,
+      );
+
+      await this.recordTaskExecution('cache-warming', startTime);
+
+      // Add notification if warming failed significantly
+      if (warmingResult.failureCount > warmingResult.successCount) {
+        await this.queueService.addNotificationJob({
+          userId: 'admin',
+          type: 'system_alert',
+          title: 'Cache Warming Alert',
+          message: `Cache warming had ${warmingResult.failureCount} failures out of ${warmingResult.totalKeysWarmed} keys`,
+          priority: 'high',
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to perform cache warming:', error);
+      await this.recordTaskExecution('cache-warming', startTime, error);
+      
+      // Add alert notification
+      await this.queueService.addNotificationJob({
+        userId: 'admin',
+        type: 'system_alert',
+        title: 'Cache Warming Failed',
+        message: `Cache warming job failed: ${error.message}`,
+        priority: 'high',
+      });
+    }
+  }
+
+  // ==================== Portfolio Optimization (Daily at 1 AM) ====================
+
+  @Cron('0 1 * * *', {
+    name: 'portfolio-optimization',
+    timeZone: 'UTC',
+  })
+  async performPortfolioOptimization(): Promise<void> {
+    this.logger.log('Starting scheduled daily portfolio optimization');
+
+    try {
+      // Queue portfolio optimization jobs for all users with active balances
+      await this.queueService.addReportJob({
+        reportType: 'custom',
+        startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+        endDate: new Date(),
+        format: 'xlsx',
+        filters: {
+          includeOptimization: true,
+          optimizationType: 'daily',
+        },
+      });
+
+      this.logger.log('Portfolio optimization jobs scheduled successfully');
+    } catch (error) {
+      this.logger.error('Failed to schedule portfolio optimization:', error);
+    }
+  }
+
+  // ==================== Queue Health Monitoring (Every 5 minutes) ====================
 
   @Cron(CronExpression.EVERY_5_MINUTES, {
     name: 'system-health-check',
@@ -160,9 +271,33 @@ export class SchedulerService implements OnModuleInit {
     this.logger.debug('Running system health check');
 
     try {
-      // This would typically check database, Redis, external services, etc.
-      // If issues are detected, send alerts
-      
+      // Check queue health for all queues
+      const queueNames: QueueName[] = Object.values(QueueName) as QueueName[];
+      const unhealthyQueues: string[] = [];
+
+      for (const queueName of queueNames) {
+        const health = this.queueAnalytics.getQueueHealth(queueName);
+        if (health.status !== 'healthy') {
+          unhealthyQueues.push(`${queueName}: ${health.issues.join(', ')}`);
+        }
+      }
+
+      // Send alert if any queues are unhealthy
+      if (unhealthyQueues.length > 0) {
+        await this.queueService.addNotificationJob({
+          userId: 'admin',
+          type: 'system_alert',
+          title: 'Queue Health Alert',
+          message: `Unhealthy queues detected: ${unhealthyQueues.join('; ')}`,
+          priority: 'high',
+        });
+
+        this.logger.warn(
+          `Queue health issues detected: ${unhealthyQueues.join('; ')}`,
+        );
+      }
+
+      // Additional system checks can be added here
       /*
       const healthStatus = await this.healthService.check();
       
@@ -217,5 +352,35 @@ export class SchedulerService implements OnModuleInit {
       format,
       email,
     });
+  }
+
+  async triggerCacheWarming(): Promise<void> {
+    this.logger.log('Manually triggering cache warming');
+    const result = await this.cacheWarming.forceWarmCache();
+    this.logger.log(
+      `Cache warming completed: ${result.totalKeysWarmed} keys, ` +
+      `${result.successCount} success, ${result.failureCount} failed`,
+    );
+  }
+
+  async triggerPortfolioOptimization(): Promise<void> {
+    this.logger.log('Manually triggering portfolio optimization');
+    await this.performPortfolioOptimization();
+  }
+
+  getSchedulerStatus(): any {
+    return {
+      status: 'running',
+      scheduledJobs: [
+        { name: 'cache-warming', schedule: '*/30 * * * *', description: 'Cache warming every 30 minutes' },
+        { name: 'daily-report-generation', schedule: '0 2 * * *', description: 'Daily reports at 2 AM' },
+        { name: 'portfolio-optimization', schedule: '0 1 * * *', description: 'Portfolio optimization at 1 AM' },
+        { name: 'weekly-cleanup', schedule: '0 3 * * 0', description: 'Weekly cleanup on Sunday 3 AM' },
+        { name: 'hourly-temp-cleanup', schedule: '0 * * * *', description: 'Hourly temp file cleanup' },
+        { name: 'session-cleanup', schedule: '*/30 * * * *', description: 'Session cleanup every 30 minutes' },
+        { name: 'system-health-check', schedule: '*/5 * * * *', description: 'System health check every 5 minutes' },
+        { name: 'monthly-report-generation', schedule: '0 1 1 * *', description: 'Monthly reports on 1st at 1 AM' },
+      ],
+    };
   }
 }

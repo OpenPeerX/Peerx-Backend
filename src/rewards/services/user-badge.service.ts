@@ -9,6 +9,9 @@ type UserWithStats = {
   tradesCount?: number;
   totalProfit?: number;
   completedTutorial?: boolean;
+  tutorialsCompleted?: number;
+  learningStreak?: number;
+  learningLevel?: string;
 };
 
 type Criteria = {
@@ -21,6 +24,17 @@ const CRITERIA: Criteria[] = [
   { key: 'first_trade', badgeName: 'First Trade', condition: (u) => (u.tradesCount ?? 0) >= 1 },
   { key: 'profit_1000', badgeName: 'Profit Hunter', condition: (u) => (u.totalProfit ?? 0) >= 1000 },
   { key: 'tutorial_complete', badgeName: 'Learner', condition: (u) => u.completedTutorial === true },
+  
+  // Learning achievements
+  { key: 'first_tutorial', badgeName: 'First Steps', condition: (u) => (u.tutorialsCompleted ?? 0) >= 1 },
+  { key: 'dedicated_learner', badgeName: 'Dedicated Learner', condition: (u) => (u.tutorialsCompleted ?? 0) >= 5 },
+  { key: 'knowledge_seeker', badgeName: 'Knowledge Seeker', condition: (u) => (u.tutorialsCompleted ?? 0) >= 10 },
+  { key: 'week_streak', badgeName: 'Week Warrior', condition: (u) => (u.learningStreak ?? 0) >= 7 },
+  { key: 'month_streak', badgeName: 'Month Master', condition: (u) => (u.learningStreak ?? 0) >= 30 },
+  { key: 'intermediate_learner', badgeName: 'Intermediate', condition: (u) => u.learningLevel === 'INTERMEDIATE' },
+  { key: 'advanced_learner', badgeName: 'Advanced', condition: (u) => u.learningLevel === 'ADVANCED' },
+  { key: 'expert_learner', badgeName: 'Expert', condition: (u) => u.learningLevel === 'EXPERT' },
+  { key: 'master_learner', badgeName: 'Master', condition: (u) => u.learningLevel === 'MASTER' },
 ];
 
 @Injectable()

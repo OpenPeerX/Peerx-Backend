@@ -37,5 +37,20 @@ tx.${settlementTxHash} on etherscan
 ## Wallets
 User N → deriveWallet(N % 10)
 
-Ready for deposits/withdrawals extension.
+## External Wallets
+- **Balance**: `POST /portfolio/wallet/balance/:chainId`
+- **Withdraw**: `POST /portfolio/wallet/withdraw/:chainId {to, amount}`
+- **Verify Deposit**: `POST /portfolio/wallet/deposit/verify {address, signature, message}`
+
+## Local Testing
+1. `chmod +x scripts/local-chain.sh && ./scripts/local-chain.sh`
+2. Copy contract addr to .env
+3. `npm run start:dev`
+4. Create trade → POST /trading/settle/1
+
+## Acceptance ✅
+- Trades settled on blockchain (tx hash saved)
+- External wallet support: balance/withdraw/verify functional
+
+Full integration complete.
 
