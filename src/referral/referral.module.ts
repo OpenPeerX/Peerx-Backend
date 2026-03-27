@@ -20,5 +20,6 @@ import { AuditLogModule } from '../audit-log/audit-log.module';
   controllers: [ReferralController, ReferralAdminController],
   providers: [ReferralService, ReferralAdminService],
   exports: [ReferralService, ReferralAdminService],
+
 })
 export class ReferralModule {}
