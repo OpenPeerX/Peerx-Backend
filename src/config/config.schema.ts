@@ -107,4 +107,17 @@ export const configSchema = Joi.object({
   // Shutdown
   ENABLE_SHUTDOWN_HOOKS: Joi.boolean().default(true),
   SHUTDOWN_TIMEOUT: Joi.number().integer().min(1000).default(30000),
+
+  // Exchange and Stellar
+  EXCHANGE_RATE_URL: Joi.string()
+    .uri()
+    .required()
+    .description('URL for the exchange rate service'),
+  STELLAR_HORIZON_URL: Joi.string()
+    .uri()
+    .required()
+    .description('URL for the Stellar Horizon service'),
+  STELLAR_USDC_ISSUER: Joi.string()
+    .required()
+    .description('Issuer address for USDC on Stellar blockchain'),
 });
