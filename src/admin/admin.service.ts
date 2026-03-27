@@ -1,0 +1,62 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource }  from 'typeorm';
+import { AdjustPointsDto }         from './dto/adjust-points.dto';
+import { ReferralQueryDto }        from './dto/referral-query.dto';
+
+@Injectable()
+export class AdminService {
+  constructor(
+    @InjectRepository('waitlist_referral_points')
+    private readonly pointsRepo: Repository<any>,
+    @InjectRepository('waitlist_referrals')
+    private readonly referralRepo: Repository<any>,
+    @InjectRepository('audit_log')
+    private readonly auditRepo: Repository<any>,
+  ) {}
+
+  // #201 — referrals list with filters
+  async getReferrals(query: ReferralQueryDto) {
+    const { status, suspect, page, limit } = query;
+    const qb = this.referralRepo.createQueryBuilder('r')
+      .orderBy('r.created_at', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    if (status)  qb.andWhere('r.status = :status', { status });
+    if (suspect) qb.andWhere('r.fraud_score >= :threshold', { threshold: 40 });
+
+    const [data, total] = await qb.getManyAndCount();
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  // #201 — manual point adjustment
+  async adjustPoints(referralId: string, dto: AdjustPointsDto, adminId: string): Promise<any> {
+    const referral = await this.referralRepo.findOne({ where: { id: referralId } });
+    if (!referral) throw new NotFoundException('Referral not found');
+
+    await this.pointsRepo.save(
+      this.pointsRepo.create({
+        user_id: referral.referrer_id,
+        points:  dto.delta,
+        reason:  dto.reason,
+      }),
+    );
+
+    await this.auditEntry(adminId, 'adjust_points', 'referral', referralId, dto);
+    return { success: true };
+  }
+
+  // #201 — shared audit logger
+  async auditEntry(
+    adminId: string,
+    action: string,
+    targetType: string,
+    targetId: string,
+    payload?: object,
+  ): Promise<void> {
+    await this.auditRepo.save(
+      this.auditRepo.create({ admin_id: adminId, action, target_type: targetType, target_id: targetId, payload }),
+    );
+  }
+}
