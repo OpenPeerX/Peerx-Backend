@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReferralService } from './referral.service';
 import { ReferralController } from './referral.controller';
@@ -10,16 +10,38 @@ import { ReferralDispute } from './entities/referral-dispute.entity';
 import { User } from '../user/entities/user.entity';
 import { NotificationModule } from '../notification/notification.module';
 import { AuditLogModule } from '../audit-log/audit-log.module';
+import { UserBalance } from 'src/balance/entities/user-balance.entity';
+import { BalanceAudit } from 'src/balance/balance-audit.entity';
+import { Trade } from 'src/trading/entities/trade.entity';
+import { LeaderboardController } from './leaderboard.controller';
+import { ReferralServiceExtended } from './referral.service.extended';
+import { ReferralTrackingMiddleware } from './referral.tracking.middleware';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Referral, ReferralConfig, ReferralDispute, User]),
+    TypeOrmModule.forFeature([
+      Referral,
+      ReferralConfig,
+      ReferralDispute,
+      User,
+      UserBalance,
+      BalanceAudit,
+      Trade,
+    ]),
     NotificationModule,
     AuditLogModule,
   ],
-  controllers: [ReferralController, ReferralAdminController],
-  providers: [ReferralService, ReferralAdminService],
-  exports: [ReferralService, ReferralAdminService],
-
+  controllers: [
+    ReferralController,
+    ReferralAdminController,
+    LeaderboardController,
+  ],
+  providers: [ReferralService, ReferralAdminService, ReferralServiceExtended],
+  exports: [ReferralService, ReferralAdminService, ReferralServiceExtended],
 })
-export class ReferralModule {}
+export class ReferralModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply referral tracking to all routes so ?ref= is always captured
+    consumer.apply(ReferralTrackingMiddleware).forRoutes('*');
+  }
+}
