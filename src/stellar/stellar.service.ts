@@ -58,7 +58,7 @@ export class StellarService implements OnModuleInit {
    * @param publicKey Public key of the account
    * @returns Array of balances
    */
-  async getBalances(publicKey: string): Promise<StellarSdk.Horizon.BalanceLine[]> {
+  async getBalances(publicKey: string): Promise<any[]> {
     try {
       const account = await this.loadAccount(publicKey);
       return account.balances;
@@ -77,6 +77,23 @@ export class StellarService implements OnModuleInit {
       throw new Error('STELLAR_USDC_ISSUER is not configured');
     }
     return this.usdcIssuer;
+  }
+
+  /**
+   * Fetches the balance for the configured USDC asset
+   * @param publicKey Public key of the account
+   * @returns Balance string or "0" if not found
+   */
+  async getUsdcBalance(publicKey: string): Promise<string> {
+    const balances = await this.getBalances(publicKey);
+    const usdcIssuer = this.getUsdcIssuer();
+    
+    // Look for USDC balance that matches our configured issuer
+    const usdcBalance = balances.find((b: any) => 
+      b.asset_code === 'USDC' && b.asset_issuer === usdcIssuer
+    );
+    
+    return usdcBalance ? (usdcBalance as any).balance : '0';
   }
 
   /**

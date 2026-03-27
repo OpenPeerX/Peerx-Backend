@@ -52,4 +52,32 @@ describe('StellarService', () => {
       expect(service.getServer()).toBeDefined();
     });
   });
+
+  describe('getUsdcBalance', () => {
+    it('should filter balances and return the USDC balance for the configured issuer', async () => {
+      const mockPublicKey = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+      const mockBalances = [
+        { asset_type: 'native', balance: '100.0000000' },
+        { asset_code: 'USDC', asset_issuer: mockConfigService.stellar.usdcIssuer, balance: '50.25' },
+        { asset_code: 'OTHER', asset_issuer: 'OTHER_ISSUER', balance: '10.00' }
+      ];
+
+      jest.spyOn(service, 'getBalances').mockResolvedValue(mockBalances as any[]);
+      
+      const balance = await service.getUsdcBalance(mockPublicKey);
+      expect(balance).toBe('50.25');
+    });
+
+    it('should return "0" if USDC balance is not found', async () => {
+      const mockPublicKey = 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5';
+      const mockBalances = [
+        { asset_type: 'native', balance: '100.0000000' }
+      ];
+
+      jest.spyOn(service, 'getBalances').mockResolvedValue(mockBalances as any[]);
+      
+      const balance = await service.getUsdcBalance(mockPublicKey);
+      expect(balance).toBe('0');
+    });
+  });
 });
