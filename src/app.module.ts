@@ -23,6 +23,8 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { AlertModule } from './alerts/alert.module';
 import { ReferralModule } from './referral/referral.module';
 import { StellarModule } from './stellar/stellar.module';
+import { ComplianceModule } from './compliance/compliance.module';
+import { QuantumCryptoModule } from './quantum-crypto/quantum-crypto.module';
 
 @Module({
   imports: [
@@ -51,6 +53,8 @@ import { StellarModule } from './stellar/stellar.module';
     AlertModule,
     ReferralModule,
     StellarModule,
+    ComplianceModule,
+    QuantumCryptoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
