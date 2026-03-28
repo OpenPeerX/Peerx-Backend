@@ -10,6 +10,8 @@ import { SwapPricingService } from './swap-pricing.service';
 import { SwapSettlementService } from './swap-settlement.service';
 import { SwapSagaService } from './swap-saga.service';
 import { SwapBatchProcessor } from './swap-batch.processor';
+import { AmmService } from './amm.service';
+import { LiquidityService } from './liquidity.service';
 import { QueueName } from '../queue/queue.constants';
 import { QueueModule } from '../queue/queue.module';
 import { CustomCacheModule } from '../common/cache/cache.module';
@@ -38,7 +40,9 @@ import { BalanceModule } from '../balance/balance.module';
     SwapSettlementService,
     SwapSagaService,
     SwapBatchProcessor,
+    AmmService,
+    LiquidityService,
   ],
-  exports: [SwapService, SwapPricingService],
+  exports: [SwapService, SwapPricingService, AmmService, LiquidityService],
 })
 export class SwapModule {}

@@ -25,6 +25,9 @@ import { ReferralModule } from './referral/referral.module';
 import { StellarModule } from './stellar/stellar.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { QuantumCryptoModule } from './quantum-crypto/quantum-crypto.module';
+import { AdminModule } from './admin/admin.module';
+import { NftModule } from './nft/nft.module';
+import { CrossChainModule } from './cross-chain/cross-chain.module';
 
 @Module({
   imports: [
@@ -55,6 +58,9 @@ import { QuantumCryptoModule } from './quantum-crypto/quantum-crypto.module';
     StellarModule,
     ComplianceModule,
     QuantumCryptoModule,
+    AdminModule,
+    NftModule,
+    CrossChainModule,
   ],
   controllers: [AppController],
   providers: [AppService],
