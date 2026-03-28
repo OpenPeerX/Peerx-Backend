@@ -57,4 +57,31 @@ export class WaitlistService {
       [limit],
     );
   }
+
+  // #203 — stats
+  async getStats(): Promise<any> {
+    const totalSignups = await this.waitlistRepo.count();
+    const verifiedUsers = await this.waitlistRepo.count({ where: { status: 'verified' } });
+    const invitedUsers = await this.waitlistRepo.count({ where: { status: 'invited' } });
+
+    // Daily aggregates (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const dailySignups = await this.dataSource.query(
+      `SELECT date(created_at) as date, count(*) as count
+       FROM waitlist_entries
+       WHERE created_at >= $1
+       GROUP BY date(created_at)
+       ORDER BY date ASC`,
+      [sevenDaysAgo.toISOString()]
+    );
+
+    return {
+      totalSignups,
+      verifiedUsers,
+      invitedUsers,
+      dailySignups,
+    };
+  }
 }

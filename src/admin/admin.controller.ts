@@ -26,10 +26,20 @@ export class AdminController {
     return this.waitlistService.findAll(query);
   }
 
+  @Get('waitlist/stats')
+  getWaitlistStats() {
+    return this.waitlistService.getStats();
+  }
+
   // #201 GET /admin/referrals
   @Get('referrals')
   getReferrals(@Query() query: ReferralQueryDto) {
     return this.adminService.getReferrals(query);
+  }
+
+  @Get('referrals/stats')
+  getReferralStats() {
+    return this.adminService.getReferralStats();
   }
 
   // #201 POST /admin/waitlist/:id/invite

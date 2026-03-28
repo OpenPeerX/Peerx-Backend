@@ -59,4 +59,24 @@ export class AdminService {
       this.auditRepo.create({ admin_id: adminId, action, target_type: targetType, target_id: targetId, payload }),
     );
   }
+
+  // #203 — referral stats
+  async getReferralStats(): Promise<any> {
+    const totalReferrals = await this.referralRepo.count();
+    const verifiedReferrals = await this.referralRepo.count({ where: { status: 'verified' } });
+    
+    const topReferrers = await this.referralRepo.createQueryBuilder('r')
+      .select('r.referrer_id', 'referrerId')
+      .addSelect('COUNT(r.id)', 'count')
+      .groupBy('r.referrer_id')
+      .orderBy('count', 'DESC')
+      .limit(10)
+      .getRawMany();
+
+    return {
+      totalReferrals,
+      verifiedReferrals,
+      topReferrers,
+    };
+  }
 }

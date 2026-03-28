@@ -1,12 +1,3 @@
-  readonly botTradesTotal = new Counter({
-    name: 'bot_trades_total',
-    help: 'Total number of trades executed by bots',
-    labelNames: ['botId', 'asset', 'type'],
-    registers: [this.registry],
-  });
-  recordBotTrade(botId: number, asset: string, type: string): void {
-    this.botTradesTotal.labels(botId.toString(), asset, type).inc();
-  }
 import { Injectable } from '@nestjs/common';
 import {
   Counter,
@@ -19,6 +10,19 @@ import {
 @Injectable()
 export class MetricsService {
   private readonly registry = new Registry();
+
+  readonly waitlistSignupsTotal = new Counter({
+    name: 'waitlist_signups_total',
+    help: 'Total number of waitlist signups',
+    labelNames: ['status'],
+    registers: [this.registry],
+  });
+
+  readonly referralConversionsTotal = new Counter({
+    name: 'referral_conversions_total',
+    help: 'Total number of referral conversions',
+    registers: [this.registry],
+  });
 
   readonly httpRequestsTotal = new Counter({
     name: 'http_requests_total',
@@ -117,6 +121,14 @@ export class MetricsService {
 
   recordCacheEviction(): void {
     this.cacheRequestsTotal.labels('eviction').inc();
+  }
+
+  recordWaitlistSignup(status: string): void {
+    this.waitlistSignupsTotal.labels(status).inc();
+  }
+
+  recordReferralConversion(): void {
+    this.referralConversionsTotal.inc();
   }
 
   private updateCacheHitRatio(): void {
