@@ -22,6 +22,7 @@ import { PrivacyProfile } from './privacy/entities/privacy-profile.entity';
 import { EncryptedOrder } from './privacy/entities/encrypted-order.entity';
 import { PrivacyAuditLog } from './privacy/entities/privacy-audit-log.entity';
 import { PlatformModule } from './platform/platform.module';
+import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PlatformModule } from './platform/platform.module';
     OptionsModule,
     LiquidityMiningModule,
     MobileModule,
+    AdvancedAnalyticsModule,
     PrivacyModule,
   ],
   controllers: [AppController],
