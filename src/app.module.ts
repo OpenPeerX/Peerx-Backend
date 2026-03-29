@@ -6,6 +6,7 @@ import { GovernanceModule } from './governance/governance.module';
 import { OptionsModule } from './options/options.module';
 import { LiquidityMiningModule } from './liquidity-mining/liquidity-mining.module';
 import { MobileModule } from './mobile/mobile.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { AuditEntry } from './platform/entities/audit-entry.entity';
 import { GovernanceProposal } from './governance/entities/governance-proposal.entity';
 import { GovernanceVote } from './governance/entities/governance-vote.entity';
@@ -17,6 +18,9 @@ import { LiquidityPool } from './liquidity-mining/entities/liquidity-pool.entity
 import { LiquidityMiningProgram } from './liquidity-mining/entities/liquidity-mining-program.entity';
 import { LiquidityStakePosition } from './liquidity-mining/entities/liquidity-stake-position.entity';
 import { LiquidityRewardLedger } from './liquidity-mining/entities/liquidity-reward-ledger.entity';
+import { PrivacyProfile } from './privacy/entities/privacy-profile.entity';
+import { EncryptedOrder } from './privacy/entities/encrypted-order.entity';
+import { PrivacyAuditLog } from './privacy/entities/privacy-audit-log.entity';
 import { PlatformModule } from './platform/platform.module';
 
 @Module({
@@ -36,6 +40,9 @@ import { PlatformModule } from './platform/platform.module';
         LiquidityMiningProgram,
         LiquidityStakePosition,
         LiquidityRewardLedger,
+        PrivacyProfile,
+        EncryptedOrder,
+        PrivacyAuditLog,
       ],
       synchronize: true,
     }),
@@ -44,6 +51,7 @@ import { PlatformModule } from './platform/platform.module';
     OptionsModule,
     LiquidityMiningModule,
     MobileModule,
+    PrivacyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
