@@ -26,6 +26,9 @@ import { PlatformModule } from './platform/platform.module';
 import { RiskModule } from './risk/risk.module';
 import { RiskProfile } from './risk/entities/risk-profile.entity';
 import { RiskOrder } from './risk/entities/risk-order.entity';
+import { DidModule } from './did/did.module';
+import { DidDocument } from './did/entities/did-document.entity';
+import { VerifiableCredential } from './did/entities/verifiable-credential.entity';
 import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
 
 @Module({
@@ -47,6 +50,8 @@ import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics
         LiquidityRewardLedger,
         RiskOrder,
         RiskProfile,
+        DidDocument,
+        VerifiableCredential,
         PrivacyProfile,
         EncryptedOrder,
         PrivacyAuditLog,
@@ -60,6 +65,7 @@ import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics
     MobileModule,
     ScheduleModule.forRoot(),
     RiskModule,
+    DidModule,
     AdvancedAnalyticsModule,
     PrivacyModule,
   ],
