@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GovernanceModule } from './governance/governance.module';
@@ -18,6 +19,9 @@ import { LiquidityMiningProgram } from './liquidity-mining/entities/liquidity-mi
 import { LiquidityStakePosition } from './liquidity-mining/entities/liquidity-stake-position.entity';
 import { LiquidityRewardLedger } from './liquidity-mining/entities/liquidity-reward-ledger.entity';
 import { PlatformModule } from './platform/platform.module';
+import { RiskModule } from './risk/risk.module';
+import { RiskProfile } from './risk/entities/risk-profile.entity';
+import { RiskOrder } from './risk/entities/risk-order.entity';
 
 @Module({
   imports: [
@@ -36,6 +40,8 @@ import { PlatformModule } from './platform/platform.module';
         LiquidityMiningProgram,
         LiquidityStakePosition,
         LiquidityRewardLedger,
+        RiskOrder,
+        RiskProfile,
       ],
       synchronize: true,
     }),
@@ -44,6 +50,8 @@ import { PlatformModule } from './platform/platform.module';
     OptionsModule,
     LiquidityMiningModule,
     MobileModule,
+    ScheduleModule.forRoot(),
+    RiskModule,
   ],
   controllers: [AppController],
   providers: [AppService],
