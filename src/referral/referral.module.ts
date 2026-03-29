@@ -16,6 +16,9 @@ import { Trade } from 'src/trading/entities/trade.entity';
 import { LeaderboardController } from './leaderboard.controller';
 import { ReferralServiceExtended } from './referral.service.extended';
 import { ReferralTrackingMiddleware } from './referral.tracking.middleware';
+import { ReferralCodeService } from './referral-code.service';
+import { ReferralCode } from './entities/referral-code.entity';
+import { ReferralReward } from './entities/referral-reward.entity';
 
 @Module({
   imports: [
@@ -27,6 +30,8 @@ import { ReferralTrackingMiddleware } from './referral.tracking.middleware';
       UserBalance,
       BalanceAudit,
       Trade,
+      ReferralCode,
+      ReferralReward,
     ]),
     NotificationModule,
     AuditLogModule,
@@ -36,8 +41,8 @@ import { ReferralTrackingMiddleware } from './referral.tracking.middleware';
     ReferralAdminController,
     LeaderboardController,
   ],
-  providers: [ReferralService, ReferralAdminService, ReferralServiceExtended],
-  exports: [ReferralService, ReferralAdminService, ReferralServiceExtended],
+  providers: [ReferralService, ReferralAdminService, ReferralServiceExtended, ReferralCodeService],
+  exports: [ReferralService, ReferralAdminService, ReferralServiceExtended, ReferralCodeService],
 })
 export class ReferralModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
