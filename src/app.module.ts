@@ -7,6 +7,7 @@ import { GovernanceModule } from './governance/governance.module';
 import { OptionsModule } from './options/options.module';
 import { LiquidityMiningModule } from './liquidity-mining/liquidity-mining.module';
 import { MobileModule } from './mobile/mobile.module';
+import { PrivacyModule } from './privacy/privacy.module';
 import { AuditEntry } from './platform/entities/audit-entry.entity';
 import { GovernanceProposal } from './governance/entities/governance-proposal.entity';
 import { GovernanceVote } from './governance/entities/governance-vote.entity';
@@ -18,6 +19,9 @@ import { LiquidityPool } from './liquidity-mining/entities/liquidity-pool.entity
 import { LiquidityMiningProgram } from './liquidity-mining/entities/liquidity-mining-program.entity';
 import { LiquidityStakePosition } from './liquidity-mining/entities/liquidity-stake-position.entity';
 import { LiquidityRewardLedger } from './liquidity-mining/entities/liquidity-reward-ledger.entity';
+import { PrivacyProfile } from './privacy/entities/privacy-profile.entity';
+import { EncryptedOrder } from './privacy/entities/encrypted-order.entity';
+import { PrivacyAuditLog } from './privacy/entities/privacy-audit-log.entity';
 import { PlatformModule } from './platform/platform.module';
 import { RiskModule } from './risk/risk.module';
 import { RiskProfile } from './risk/entities/risk-profile.entity';
@@ -25,6 +29,7 @@ import { RiskOrder } from './risk/entities/risk-order.entity';
 import { DidModule } from './did/did.module';
 import { DidDocument } from './did/entities/did-document.entity';
 import { VerifiableCredential } from './did/entities/verifiable-credential.entity';
+import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
 
 @Module({
   imports: [
@@ -47,6 +52,9 @@ import { VerifiableCredential } from './did/entities/verifiable-credential.entit
         RiskProfile,
         DidDocument,
         VerifiableCredential,
+        PrivacyProfile,
+        EncryptedOrder,
+        PrivacyAuditLog,
       ],
       synchronize: true,
     }),
@@ -58,6 +66,8 @@ import { VerifiableCredential } from './did/entities/verifiable-credential.entit
     ScheduleModule.forRoot(),
     RiskModule,
     DidModule,
+    AdvancedAnalyticsModule,
+    PrivacyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
