@@ -12,15 +12,17 @@ import { User } from '../../user/entities/user.entity';
 
 export enum ReferralStatus {
   PENDING = 'PENDING',
-  COMPLETED = 'COMPLETED',
+  VERIFIED = 'VERIFIED',
+  ACTIVE = 'ACTIVE',
   REWARDED = 'REWARDED',
-  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
 }
 
-@Entity('Referral')
+@Entity('referrals')
 @Index(['referrerId'])
 @Index(['referredUserId'])
 @Index(['status'])
+@Index(['createdAt'])
 export class Referral {
   @PrimaryGeneratedColumn()
   id: number;
@@ -33,32 +35,24 @@ export class Referral {
   @Column()
   referredUserId: number;
 
-  @Column({ unique: true })
-  referralCode: string;
-
   @Column({
     type: 'varchar',
     default: ReferralStatus.PENDING,
+    length: 20,
   })
   status: ReferralStatus;
 
-  @Column('decimal', { precision: 18, scale: 8, default: 0 })
-  pendingReward: number;
+  @CreateDateColumn()
+  createdAt: Date;
 
-  @Column('decimal', { precision: 18, scale: 8, default: 0 })
-  earnedReward: number;
+  @UpdateDateColumn()
+  updatedAt: Date;
 
-  @Column({ nullable: true })
-  referredUserEmail: string;
-
-  @Column({ nullable: true })
-  referredUserUsername: string;
-
-  @Column({ nullable: true })
-  referredAt: Date;
-
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   rewardedAt: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  verifiedAt: Date;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'referrerId' })
@@ -67,10 +61,4 @@ export class Referral {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'referredUserId' })
   referredUser: User;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
 }
