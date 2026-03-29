@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserBadgeService } from '../rewards/services/user-badge.service';
@@ -30,6 +31,7 @@ export class TradingService {
     private readonly orderBookRepository: Repository<OrderBook>,
     private readonly matchingEngine: MatchingEngineService,
     private readonly cacheService: CacheService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async swap(
@@ -117,6 +119,18 @@ export class TradingService {
 
       // Invalidate cache after trade execution
       await this.cacheService.invalidateTradeRelatedCaches(userId.toString(), asset);
+
+      this.eventEmitter.emit('trading.trade.executed', {
+        tradeId: trade.id,
+        userId,
+        asset,
+        amount,
+        price,
+        type: tradeTypeEnum,
+        executedAt: trade.timestamp ?? new Date(),
+        notionalValue: tradeValue,
+        pnl,
+      });
 
       return { success: true, trade, badgeAwarded };
     } catch (error) {

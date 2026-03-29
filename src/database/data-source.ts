@@ -13,6 +13,14 @@ import { ReferralReward } from '../referral/entities/referral-reward.entity';
 import { LeaderboardCache } from '../referral/entities/leaderboard-cache.entity';
 import { WaitlistUser } from '../waitlist/entities/waitlist-user.entity';
 import { WaitlistVerificationToken } from '../waitlist/entities/waitlist-verification-token.entity';
+import { SocialTraderProfile } from '../social-trading/entities/social-trader-profile.entity';
+import { SharedStrategy } from '../social-trading/entities/shared-strategy.entity';
+import { TraderFollow } from '../social-trading/entities/trader-follow.entity';
+import { CopyTradingRelationship } from '../social-trading/entities/copy-trading-relationship.entity';
+import { CopiedTrade } from '../social-trading/entities/copied-trade.entity';
+import { StrategyComment } from '../social-trading/entities/strategy-comment.entity';
+import { StrategyLike } from '../social-trading/entities/strategy-like.entity';
+import { TraderRevenueShare } from '../social-trading/entities/trader-revenue-share.entity';
 
 export const AppDataSource = new DataSource({
   type: 'sqlite',
@@ -32,6 +40,14 @@ export const AppDataSource = new DataSource({
     LeaderboardCache,
     WaitlistUser,
     WaitlistVerificationToken,
+    SocialTraderProfile,
+    SharedStrategy,
+    TraderFollow,
+    CopyTradingRelationship,
+    CopiedTrade,
+    StrategyComment,
+    StrategyLike,
+    TraderRevenueShare,
   ],
   migrations: ['src/database/migrations/*.ts'],
   migrationsTableName: 'migrations',
