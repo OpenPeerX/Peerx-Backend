@@ -5,6 +5,7 @@ import { ComplianceRuleEntity, RuleType, ActionType, RuleSeverity } from '../ent
 import { ComplianceAlertEntity, AlertStatus, AlertPriority } from '../entities/compliance-alert.entity';
 import { AuditTrailEntity, AuditAction, ResourceType, AuditStatus } from '../entities/audit-trail.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { VcIssuerService } from '../../did/services/vc-issuer.service';
 
 interface TransactionData {
   id: string;
@@ -40,6 +41,7 @@ export class ComplianceMonitoringService implements OnModuleInit {
     private readonly complianceAlertRepository: Repository<ComplianceAlertEntity>,
     @InjectRepository(AuditTrailEntity)
     private readonly auditTrailRepository: Repository<AuditTrailEntity>,
+    private readonly vcIssuerService: VcIssuerService,
   ) {}
 
   async onModuleInit() {
@@ -495,5 +497,12 @@ export class ComplianceMonitoringService implements OnModuleInit {
       resolvedBy,
       resolvedAt: new Date(),
     });
+  }
+
+  async grantKycClearance(userDid: string, kycTier: number, fullName: string, dob: string): Promise<any> {
+    this.logger.log(`Granting KYC clearance Verifiable Credential for DID ${userDid}`);
+    // Internally mints an encrypted JSON payload verifying their compliance tier
+    const vc = await this.vcIssuerService.issueKycCredential(userDid, kycTier, fullName, dob);
+    return vc;
   }
 }

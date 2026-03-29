@@ -22,6 +22,9 @@ import { PlatformModule } from './platform/platform.module';
 import { RiskModule } from './risk/risk.module';
 import { RiskProfile } from './risk/entities/risk-profile.entity';
 import { RiskOrder } from './risk/entities/risk-order.entity';
+import { DidModule } from './did/did.module';
+import { DidDocument } from './did/entities/did-document.entity';
+import { VerifiableCredential } from './did/entities/verifiable-credential.entity';
 
 @Module({
   imports: [
@@ -42,6 +45,8 @@ import { RiskOrder } from './risk/entities/risk-order.entity';
         LiquidityRewardLedger,
         RiskOrder,
         RiskProfile,
+        DidDocument,
+        VerifiableCredential,
       ],
       synchronize: true,
     }),
@@ -52,6 +57,7 @@ import { RiskOrder } from './risk/entities/risk-order.entity';
     MobileModule,
     ScheduleModule.forRoot(),
     RiskModule,
+    DidModule,
   ],
   controllers: [AppController],
   providers: [AppService],

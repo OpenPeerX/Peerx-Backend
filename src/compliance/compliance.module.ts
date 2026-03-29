@@ -8,6 +8,7 @@ import { RegulatoryReportEntity } from './entities/regulatory-report.entity';
 import { ComplianceController } from './controller/compliance.controller';
 import { ComplianceMonitoringService } from './services/compliance-monitoring.service';
 import { RegulatoryReportingService } from './services/regulatory-reporting.service';
+import { DidModule } from '../did/did.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { RegulatoryReportingService } from './services/regulatory-reporting.serv
       RegulatoryReportEntity,
     ]),
     ScheduleModule.forRoot(),
+    DidModule,
   ],
   controllers: [ComplianceController],
   providers: [
