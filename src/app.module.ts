@@ -1,68 +1,51 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { PortfolioModule } from './portfolio/portfolio.module';
-import { TradingModule } from './trading/trading.module';
-import { UserModule } from './user/user.module';
-import { RewardsModule } from './rewards/rewards.module';
-import { NotificationModule } from './notification/notification.module';
-import { BiddingModule } from './bidding/bidding.module';
-import { CommonModule } from './common/common.module';
-import { DatabaseModule } from './database/database.module';
-import { MarketDataModule } from './market-data/market-data.module';
-import { ExportModule } from './export/export.module';
-
-import { BalanceModule } from './balance/balance.module';
-import { SwapModule } from './swap/swap.module';
-
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { TutorialModule } from './tutorial/tutorial.module';
-import { GqlAppModule } from './graphql/graphql.module';
-import { AuditLogModule } from './audit-log/audit-log.module';
-import { AlertModule } from './alerts/alert.module';
-import { ReferralModule } from './referral/referral.module';
-import { StellarModule } from './stellar/stellar.module';
-import { ComplianceModule } from './compliance/compliance.module';
-import { QuantumCryptoModule } from './quantum-crypto/quantum-crypto.module';
-import { AdminModule } from './admin/admin.module';
-import { NftModule } from './nft/nft.module';
-import { CrossChainModule } from './cross-chain/cross-chain.module';
+import { GovernanceModule } from './governance/governance.module';
+import { OptionsModule } from './options/options.module';
+import { LiquidityMiningModule } from './liquidity-mining/liquidity-mining.module';
+import { MobileModule } from './mobile/mobile.module';
+import { AuditEntry } from './platform/entities/audit-entry.entity';
+import { GovernanceProposal } from './governance/entities/governance-proposal.entity';
+import { GovernanceVote } from './governance/entities/governance-vote.entity';
+import { GovernanceStake } from './governance/entities/governance-stake.entity';
+import { OptionContract } from './options/entities/option-contract.entity';
+import { OptionOrder } from './options/entities/option-order.entity';
+import { OptionPosition } from './options/entities/option-position.entity';
+import { LiquidityPool } from './liquidity-mining/entities/liquidity-pool.entity';
+import { LiquidityMiningProgram } from './liquidity-mining/entities/liquidity-mining-program.entity';
+import { LiquidityStakePosition } from './liquidity-mining/entities/liquidity-stake-position.entity';
+import { LiquidityRewardLedger } from './liquidity-mining/entities/liquidity-reward-ledger.entity';
+import { PlatformModule } from './platform/platform.module';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'swaptrade.db',
-      autoLoadEntities: true,
+      entities: [
+        AuditEntry,
+        GovernanceProposal,
+        GovernanceVote,
+        GovernanceStake,
+        OptionContract,
+        OptionOrder,
+        OptionPosition,
+        LiquidityPool,
+        LiquidityMiningProgram,
+        LiquidityStakePosition,
+        LiquidityRewardLedger,
+      ],
       synchronize: true,
     }),
-    AuthModule,
-    PortfolioModule,
-    TradingModule,
-    UserModule,
-    RewardsModule,
-    NotificationModule,
-    BiddingModule,
-    CommonModule,
-    DatabaseModule,
-    BalanceModule,
-    SwapModule,
-    TutorialModule,
-    GqlAppModule,
-    MarketDataModule,
-    ExportModule,
-    AuditLogModule,
-    AlertModule,
-    ReferralModule,
-    StellarModule,
-    ComplianceModule,
-    QuantumCryptoModule,
-    AdminModule,
-    NftModule,
-    CrossChainModule,
+    PlatformModule,
+    GovernanceModule,
+    OptionsModule,
+    LiquidityMiningModule,
+    MobileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
