@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { SocialTradingService } from './social-trading.service';
-import { TradeExecutionEvent } from './interfaces/social-trading.interfaces';
+import type { TradeExecutionEvent } from './interfaces/social-trading.interfaces';
 
 @Injectable()
 export class SocialTradingSyncService {

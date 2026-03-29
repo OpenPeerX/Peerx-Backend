@@ -637,13 +637,16 @@ export class SocialTradingService {
   private async refreshProfileSummary(traderId: number) {
     const user = await this.ensureUserExists(traderId);
     const profile = await this.ensureProfile(traderId, user.username);
-    const strategies = await this.strategyRepository.find({ where: { traderId } });
+    const strategies =
+      (await this.strategyRepository.find({ where: { traderId } })) ?? [];
     const strategyIds = strategies.map((strategy) => strategy.id);
-    const [followers, activeRelationships, revenues] = await Promise.all([
+    const [followers, activeRelationshipsResult, revenuesResult] = await Promise.all([
       this.followRepository.count({ where: { traderId } }),
       this.copyRelationshipRepository.find({ where: { traderId, isActive: true } }),
       this.revenueShareRepository.find({ where: { traderId } }),
     ]);
+    const activeRelationships = activeRelationshipsResult ?? [];
+    const revenues = revenuesResult ?? [];
 
     const totalLikes =
       strategyIds.length > 0
