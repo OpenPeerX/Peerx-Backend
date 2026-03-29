@@ -18,6 +18,7 @@ import { LiquidityMiningProgram } from './liquidity-mining/entities/liquidity-mi
 import { LiquidityStakePosition } from './liquidity-mining/entities/liquidity-stake-position.entity';
 import { LiquidityRewardLedger } from './liquidity-mining/entities/liquidity-reward-ledger.entity';
 import { PlatformModule } from './platform/platform.module';
+import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { PlatformModule } from './platform/platform.module';
     OptionsModule,
     LiquidityMiningModule,
     MobileModule,
+    AdvancedAnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
