@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GovernanceModule } from './governance/governance.module';
@@ -22,6 +23,9 @@ import { PrivacyProfile } from './privacy/entities/privacy-profile.entity';
 import { EncryptedOrder } from './privacy/entities/encrypted-order.entity';
 import { PrivacyAuditLog } from './privacy/entities/privacy-audit-log.entity';
 import { PlatformModule } from './platform/platform.module';
+import { RiskModule } from './risk/risk.module';
+import { RiskProfile } from './risk/entities/risk-profile.entity';
+import { RiskOrder } from './risk/entities/risk-order.entity';
 import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
 
 @Module({
@@ -41,6 +45,8 @@ import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics
         LiquidityMiningProgram,
         LiquidityStakePosition,
         LiquidityRewardLedger,
+        RiskOrder,
+        RiskProfile,
         PrivacyProfile,
         EncryptedOrder,
         PrivacyAuditLog,
@@ -52,6 +58,8 @@ import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics
     OptionsModule,
     LiquidityMiningModule,
     MobileModule,
+    ScheduleModule.forRoot(),
+    RiskModule,
     AdvancedAnalyticsModule,
     PrivacyModule,
   ],

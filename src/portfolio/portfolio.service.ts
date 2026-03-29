@@ -19,7 +19,7 @@ import { TradeType } from '../common/enums/trade-type.enum';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CacheService } from '../common/services/cache.service';
-import { RiskAnalyticsService } from './services/risk-analytics.service';
+import { RiskService } from '../risk/services/risk.service';
 
 interface MarketPrice {
   price: number;
@@ -48,7 +48,7 @@ export class PortfolioService {
     private tradeRepository: Repository<Trade>,
     private readonly portfolioRepository: PortfolioRepository,
     private readonly cacheService: CacheService,
-    private readonly riskAnalyticsService: RiskAnalyticsService,
+    private readonly riskService: RiskService,
   ) {}
 
   private readonly PORTFOLIO_CACHE_TTL = 60; // 1 minute
@@ -262,16 +262,16 @@ export class PortfolioService {
         : 0;
 
     // Volatility estimate: weighted average of asset volatilities
-    const portfolioVolatility = this.riskAnalyticsService.calculatePortfolioVolatility(summary.assets);
+    const portfolioVolatility = this.riskService.calculatePortfolioVolatility(summary.assets);
 
     // Calculate VaR (95% confidence, 1 day)
-    const parametricVaR = this.riskAnalyticsService.calculateParametricVaR(summary.totalValue, portfolioVolatility, 95);
+    const parametricVaR = this.riskService.calculateParametricVaR(summary.totalValue, portfolioVolatility, 95);
     
     // Calculate CVaR
-    const cvar = this.riskAnalyticsService.calculateCVaR(summary.totalValue, portfolioVolatility, 95);
+    const cvar = this.riskService.calculateCVaR(summary.totalValue, portfolioVolatility, 95);
 
     // Perform Stress Tests
-    const stressTestResults = this.riskAnalyticsService.performStressTests(summary.totalValue, summary.assets);
+    const stressTestResults = this.riskService.performStressTests(summary.totalValue, summary.assets);
 
     // Simulated Historical VaR (would require DB history in production)
     const historicalVaR = parametricVaR * 1.05; // Usually slightly higher than parametric in crypto
