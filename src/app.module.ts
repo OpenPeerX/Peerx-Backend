@@ -30,6 +30,7 @@ import { DidModule } from './did/did.module';
 import { DidDocument } from './did/entities/did-document.entity';
 import { VerifiableCredential } from './did/entities/verifiable-credential.entity';
 import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
+import { PricePredictionModule } from './price-prediction/price-prediction.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics
     RiskModule,
     DidModule,
     AdvancedAnalyticsModule,
+    PricePredictionModule,
     PrivacyModule,
   ],
   controllers: [AppController],

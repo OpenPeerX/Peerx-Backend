@@ -20,6 +20,7 @@ import { MultiSigApproval } from './entities/multisig-approval.entity';
 import { MultiSigWalletService } from './multisig-wallet.service';
 import { MultiSigWalletController } from './multisig-wallet.controller';
 import { AuditLog } from '../portfolio/audit-log.entity';
+import { PricePredictionModule } from '../price-prediction/price-prediction.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AuditLog } from '../portfolio/audit-log.entity';
     CacheModule,
     MatchingEngineModule,
     BlockchainModule,
+    PricePredictionModule,
   ],
   controllers: [TradingController, BotTradingController, MultiSigWalletController],
   providers: [TradingService, MatchingEngineService, SettlementService, MultiSigWalletService],
