@@ -30,6 +30,7 @@ import { DidModule } from './did/did.module';
 import { DidDocument } from './did/entities/did-document.entity';
 import { VerifiableCredential } from './did/entities/verifiable-credential.entity';
 import { AdvancedAnalyticsModule } from './advanced-analytics/advanced-analytics.module';
+import { PricePredictionModule } from './price-prediction/price-prediction.module';
 import { User } from './user/entities/user.entity';
 import { Trade } from './trading/entities/trade.entity';
 import { SocialTradingModule } from './social-trading/social-trading.module';
@@ -88,6 +89,7 @@ import { TraderRevenueShare } from './social-trading/entities/trader-revenue-sha
     RiskModule,
     DidModule,
     AdvancedAnalyticsModule,
+    PricePredictionModule,
     PrivacyModule,
     SocialTradingModule,
   ],

@@ -24,6 +24,13 @@ export class MetricsService {
     registers: [this.registry],
   });
 
+  readonly botTradesTotal = new Counter({
+    name: 'bot_trades_total',
+    help: 'Total number of bot initiated trades',
+    labelNames: ['userId', 'asset', 'side'],
+    registers: [this.registry],
+  });
+
   readonly httpRequestsTotal = new Counter({
     name: 'http_requests_total',
     help: 'Total number of HTTP requests',
@@ -129,6 +136,10 @@ export class MetricsService {
 
   recordReferralConversion(): void {
     this.referralConversionsTotal.inc();
+  }
+
+  recordBotTrade(userId: number, asset: string, side: string): void {
+    this.botTradesTotal.labels(String(userId), asset, side).inc();
   }
 
   private updateCacheHitRatio(): void {
