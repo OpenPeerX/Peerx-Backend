@@ -7,6 +7,9 @@ import { WebSocketEvents } from './events/websocket.events';
 import { WebSocketRateLimitMiddleware } from './middleware/websocket-rate-limit.middleware';
 import { PrometheusService } from '../common/monitoring/services/prometheus.service';
 import { StructuredLoggerService } from '../common/monitoring/services/structured-logger.service';
+import { StreamManagerService } from './services/stream-manager.service';
+import { ConnectionManagerService } from './services/connection-manager.service';
+import { RealtimeEventsService } from './events/realtime-events.service';
 
 @Module({
   imports: [
@@ -21,8 +24,11 @@ import { StructuredLoggerService } from '../common/monitoring/services/structure
     WebSocketEvents,
     WebSocketRateLimitMiddleware,
     PrometheusService,
-    StructuredLoggerService
+    StructuredLoggerService,
+    StreamManagerService,
+    ConnectionManagerService,
+    RealtimeEventsService,
   ],
-  exports: [WebSocketService, WebSocketEvents]
+  exports: [WebSocketService, WebSocketEvents, StreamManagerService, ConnectionManagerService, RealtimeEventsService]
 })
 export class WebSocketModule {}
