@@ -204,6 +204,9 @@ export class AdvancedAnalyticsService implements OnModuleInit, OnModuleDestroy {
       const maShort = anchor + slope * anchor * 0.008;
       const maLong = anchor + slope * anchor * 0.004;
 
+      // Mock historical data for indicator calculation
+      const mockHistory = Array.from({ length: 50 }).map((_, i) => anchor + Math.sin((Date.now() - i * 60000) / 1000000) * anchor * 0.05);
+
       return {
         asset,
         momentum,
@@ -213,6 +216,12 @@ export class AdvancedAnalyticsService implements OnModuleInit, OnModuleDestroy {
           short: Number(maShort.toFixed(6)),
           long: Number(maLong.toFixed(6)),
         },
+        indicators: {
+          rsi: this.calculateRSI(mockHistory),
+          macd: this.calculateMACD(mockHistory),
+          bollingerBands: this.calculateBollingerBands(mockHistory),
+        },
+        patterns: this.detectPatterns(mockHistory),
         support: Number((anchor * 0.96).toFixed(6)),
         resistance: Number((anchor * 1.05).toFixed(6)),
       };
@@ -224,6 +233,76 @@ export class AdvancedAnalyticsService implements OnModuleInit, OnModuleDestroy {
       trends,
     };
   }
+
+  private calculateRSI(prices: number[], periods = 14): number {
+    if (prices.length < periods + 1) return 50;
+
+    let gains = 0;
+    let losses = 0;
+
+    for (let i = 1; i <= periods; i++) {
+      const diff = prices[i] - prices[i - 1];
+      if (diff >= 0) gains += diff;
+      else losses -= diff;
+    }
+
+    if (losses === 0) return 100;
+
+    const rs = (gains / periods) / (losses / periods);
+    return Number((100 - 100 / (1 + rs)).toFixed(2));
+  }
+
+  private calculateMACD(prices: number[]): { macd: number; signal: number; histogram: number } {
+    const ema12 = this.calculateEMA(prices, 12);
+    const ema26 = this.calculateEMA(prices, 26);
+    const macd = ema12 - ema26;
+    const signal = this.calculateEMA([macd], 9); // Simplified
+
+    return {
+      macd: Number(macd.toFixed(6)),
+      signal: Number(signal.toFixed(6)),
+      histogram: Number((macd - signal).toFixed(6)),
+    };
+  }
+
+  private calculateBollingerBands(prices: number[], periods = 20, stdDev = 2): { upper: number; middle: number; lower: number } {
+    const slice = prices.slice(0, periods);
+    const middle = slice.reduce((a, b) => a + b, 0) / periods;
+    const variance = slice.reduce((a, b) => a + Math.pow(b - middle, 2), 0) / periods;
+    const sd = Math.sqrt(variance);
+
+    return {
+      upper: Number((middle + stdDev * sd).toFixed(6)),
+      middle: Number(middle.toFixed(6)),
+      lower: Number((middle - stdDev * sd).toFixed(6)),
+    };
+  }
+
+  private calculateEMA(prices: number[], periods: number): number {
+    const k = 2 / (periods + 1);
+    let ema = prices[0];
+    for (let i = 1; i < Math.min(prices.length, periods * 2); i++) {
+      ema = prices[i] * k + ema * (1 - k);
+    }
+    return ema;
+  }
+
+  private detectPatterns(prices: number[]): string[] {
+    const patterns = [];
+    const last = prices[0];
+    const prev = prices[1];
+    const prev2 = prices[2];
+
+    if (last > prev && prev > prev2) patterns.push('UPTREND');
+    if (last < prev && prev < prev2) patterns.push('DOWNTREND');
+    
+    // Simplified Double Bottom/Top detection
+    if (Math.abs(last - prev2) < last * 0.001 && prev < last * 0.99) patterns.push('POTENTIAL_DOUBLE_BOTTOM');
+    if (Math.abs(last - prev2) < last * 0.001 && prev > last * 1.01) patterns.push('POTENTIAL_DOUBLE_TOP');
+
+    return patterns;
+  }
+
 
   getSystemPerformanceMetrics(): SystemPerformanceMetrics {
     const mem = process.memoryUsage();

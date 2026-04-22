@@ -12,6 +12,8 @@ export enum ReportType {
   COMPLIANCE_SUMMARY = 'compliance_summary',
   AUDIT_TRAIL = 'audit_trail',
   INCIDENT_REPORT = 'incident_report',
+  SEC_FORM_4 = 'sec_form_4',
+  FINRA_CAT = 'finra_cat',
 }
 
 export enum ReportStatus {

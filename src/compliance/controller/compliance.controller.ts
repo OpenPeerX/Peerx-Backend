@@ -168,6 +168,69 @@ export class ComplianceController {
     }
   }
 
+  @Post('reports/sec-form-4')
+  @ApiOperation({ summary: 'Generate SEC Form 4 report' })
+  @ApiResponse({ status: 201, description: 'SEC Form 4 report generated', type: RegulatoryReportEntity })
+  async generateSECForm4(
+    @Body() body: { userId: string; transactionIds: string[] },
+  ): Promise<RegulatoryReportEntity> {
+    try {
+      return await this.regulatoryReportingService.generateSECForm4(body.userId, body.transactionIds);
+    } catch (error) {
+      this.logger.error('SEC Form 4 report generation failed:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Post('reports/finra-cat')
+  @ApiOperation({ summary: 'Generate FINRA CAT report' })
+  @ApiResponse({ status: 201, description: 'FINRA CAT report generated', type: RegulatoryReportEntity })
+  async generateFINRACAT(
+    @Body() body: { orderIds: string[] },
+  ): Promise<RegulatoryReportEntity> {
+    try {
+      return await this.regulatoryReportingService.generateFINRACAT(body.orderIds);
+    } catch (error) {
+      this.logger.error('FINRA CAT report generation failed:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Get('audit-trail/export')
+  @ApiOperation({ summary: 'Export audit trail' })
+  @ApiResponse({ status: 200, description: 'Audit trail exported' })
+  async exportAuditTrail(
+    @Query('userId') userId: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ): Promise<{ data: string }> {
+    try {
+      const data = await this.regulatoryReportingService.exportAuditTrail(
+        userId,
+        new Date(startDate),
+        new Date(endDate),
+      );
+      return { data };
+    } catch (error) {
+      this.logger.error('Audit trail export failed:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Post('validate-history')
+  @ApiOperation({ summary: 'Validate transaction history for compliance' })
+  @ApiResponse({ status: 200, description: 'Transaction history validated' })
+  async validateTransactionHistory(
+    @Body() body: { userId: string; transactions: any[] },
+  ): Promise<any> {
+    try {
+      return await this.regulatoryReportingService.validateTransactionHistory(body.userId, body.transactions);
+    } catch (error) {
+      this.logger.error('Transaction history validation failed:', error);
+      throw new BadRequestException(error.message);
+    }
+  }
+
   @Post('reports/:reportId/submit')
   @ApiOperation({ summary: 'Submit regulatory report' })
   @ApiResponse({ status: 200, description: 'Report submitted successfully', type: RegulatoryReportEntity })
