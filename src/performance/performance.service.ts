@@ -7,6 +7,7 @@ import { Bid } from '../bidding/entities/bid.entity';
 import { OrderBook } from '../trading/entities/order-book.entity';
 import { User } from '../user/entities/user.entity';
 import { OrderStatus } from '../common/enums/order-status.enum';
+import { CachingService } from './caching.service';
 
 @Injectable()
 export class PerformanceService {
@@ -22,6 +23,7 @@ export class PerformanceService {
     private readonly orderBookRepository: Repository<OrderBook>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly cachingService: CachingService,
   ) {}
 
   /**
@@ -66,17 +68,26 @@ export class PerformanceService {
   }
 
   /**
-   * Benchmark query performance with timing
+   * Benchmark query performance with timing and optional caching
    */
-  async benchmarkQuery(queryName: string, queryFn: () => Promise<any>): Promise<{ queryName: string; executionTime: number; result: any }> {
+  async benchmarkQuery(queryName: string, queryFn: () => Promise<any>, useCache = false): Promise<{ queryName: string; executionTime: number; result: any; fromCache: boolean }> {
     const startTime = Date.now();
-    const result = await queryFn();
+    let fromCache = false;
+
+    const result = useCache
+      ? await this.cachingService.wrap(queryName, async () => {
+          return await queryFn();
+        })
+      : await queryFn();
+
     const executionTime = Date.now() - startTime;
+    if (useCache && executionTime < 5) fromCache = true; // Heuristic for cache hit
 
     return {
       queryName,
       executionTime,
       result,
+      fromCache,
     };
   }
 

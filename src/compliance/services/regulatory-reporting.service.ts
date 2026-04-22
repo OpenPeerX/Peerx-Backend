@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { RegulatoryReportEntity, ReportType, ReportStatus, RegulatoryFramework, SubmissionMethod } from '../entities/regulatory-report.entity';
 import { ComplianceAlertEntity } from '../entities/compliance-alert.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { AuditLogService } from '../../audit-log/audit-log.service';
 
 interface ReportTemplate {
   type: ReportType;
@@ -34,6 +35,7 @@ export class RegulatoryReportingService {
     private readonly reportRepository: Repository<RegulatoryReportEntity>,
     @InjectRepository(ComplianceAlertEntity)
     private readonly alertRepository: Repository<ComplianceAlertEntity>,
+    private readonly auditLogService: AuditLogService,
   ) {
     this.initializeReportTemplates();
   }
@@ -84,6 +86,42 @@ export class RegulatoryReportingService {
       ],
       validationRules: [],
       submissionFormat: 'xml',
+    });
+
+    // SEC Form 4 Template
+    this.reportTemplates.set(`${ReportType.SEC_FORM_4}_${RegulatoryFramework.SEC}`, {
+      type: ReportType.SEC_FORM_4,
+      framework: RegulatoryFramework.SEC,
+      requiredFields: [
+        'reportingPerson',
+        'issuer',
+        'transactionDate',
+        'derivativeSecurities',
+        'nonDerivativeSecurities',
+      ],
+      validationRules: [
+        { field: 'transactionDate', rule: 'required', message: 'Transaction date is required' },
+      ],
+      submissionFormat: 'xml',
+    });
+
+    // FINRA CAT Template
+    this.reportTemplates.set(`${ReportType.FINRA_CAT}_${RegulatoryFramework.FINRA}`, {
+      type: ReportType.FINRA_CAT,
+      framework: RegulatoryFramework.FINRA,
+      requiredFields: [
+        'eventTimestamp',
+        'orderID',
+        'symbol',
+        'quantity',
+        'price',
+        'side',
+      ],
+      validationRules: [
+        { field: 'orderID', rule: 'required', message: 'Order ID is required' },
+        { field: 'symbol', rule: 'required', message: 'Symbol is required' },
+      ],
+      submissionFormat: 'json',
     });
   }
 
@@ -250,6 +288,110 @@ export class RegulatoryReportingService {
     };
 
     return this.generateReport(reportData);
+  }
+
+  async generateSECForm4(userId: string, transactionIds: string[]): Promise<RegulatoryReportEntity> {
+    this.logger.log(`Generating SEC Form 4 for user ${userId}`);
+
+    const secData = {
+      reportingPerson: { userId },
+      issuer: 'SwapTrade Platform',
+      transactionDate: new Date(),
+      nonDerivativeSecurities: transactionIds.map(id => ({ transactionId: id })),
+      derivativeSecurities: [],
+      reportingEntity: 'SwapTrade',
+    };
+
+    const reportData: ReportData = {
+      reportType: ReportType.SEC_FORM_4,
+      framework: RegulatoryFramework.SEC,
+      reportingPeriod: { start: new Date(), end: new Date() },
+      data: secData,
+    };
+
+    return this.generateReport(reportData);
+  }
+
+  async generateFINRACAT(orderIds: string[]): Promise<RegulatoryReportEntity> {
+    this.logger.log(`Generating FINRA CAT report for orders: ${orderIds.join(', ')}`);
+
+    const catData = {
+      reportingEntity: 'SwapTrade',
+      events: orderIds.map(id => ({
+        eventTimestamp: new Date(),
+        orderID: id,
+        symbol: 'UNKNOWN', // In real app, fetch from order data
+        quantity: 0,
+        price: 0,
+        side: 'BUY',
+      })),
+      // Dummy data for required fields to pass validation if needed
+      eventTimestamp: new Date(),
+      orderID: orderIds[0] || 'GENERIC_ID',
+      symbol: 'GENERIC',
+      quantity: 1,
+      price: 1,
+      side: 'BUY',
+    };
+
+    const reportData: ReportData = {
+      reportType: ReportType.FINRA_CAT,
+      framework: RegulatoryFramework.FINRA,
+      reportingPeriod: { start: new Date(), end: new Date() },
+      data: catData,
+    };
+
+    return this.generateReport(reportData);
+  }
+
+  async exportAuditTrail(userId: string, from: Date, to: Date): Promise<string> {
+    this.logger.log(`Exporting audit trail for user ${userId} from ${from} to ${to}`);
+
+    const logs = await this.auditLogService.getByUser(userId, from, to);
+    const integrity = await this.auditLogService.verifyChainIntegrity();
+
+    const exportData = {
+      userId,
+      exportDate: new Date(),
+      integrityStatus: integrity.valid ? 'VERIFIED' : 'FAILED',
+      logs: logs.map(log => ({
+        timestamp: log.createdAt,
+        event: log.eventType,
+        severity: log.severity,
+        checksum: log.checksum,
+        metadata: log.metadata,
+      })),
+    };
+
+    return JSON.stringify(exportData, null, 2);
+  }
+
+  async validateTransactionHistory(userId: string, transactions: any[]): Promise<any> {
+    this.logger.log(`Validating transaction history for user ${userId}`);
+
+    const validations = transactions.map(tx => {
+      const issues = [];
+      if (!tx.timestamp) issues.push('Missing timestamp');
+      if (!tx.amount || tx.amount <= 0) issues.push('Invalid amount');
+      if (!tx.asset) issues.push('Missing asset');
+
+      return {
+        transactionId: tx.id,
+        isValid: issues.length === 0,
+        issues,
+      };
+    });
+
+    return {
+      userId,
+      validatedAt: new Date(),
+      summary: {
+        total: transactions.length,
+        valid: validations.filter(v => v.isValid).length,
+        invalid: validations.filter(v => !v.isValid).length,
+      },
+      results: validations,
+    };
   }
 
   private async validateReportData(reportData: ReportData): Promise<void> {

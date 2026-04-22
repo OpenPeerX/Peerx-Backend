@@ -47,10 +47,23 @@ import { PortfolioSnapshot } from './portfolio-analytics/entities/portfolio-snap
 import { RiskMetrics } from './portfolio-analytics/entities/risk-metrics.entity';
 import { PerformanceHistory } from './portfolio-analytics/entities/performance-history.entity';
 import { Benchmark } from './portfolio-analytics/entities/benchmark.entity';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        ttl: 600, // 10 minutes default
+        max: 1000,
+      }),
+      inject: [ConfigService],
+    }),
     TypeOrmModule.forRoot({
+...
       type: 'sqlite',
       database: 'swaptrade.db',
       entities: [

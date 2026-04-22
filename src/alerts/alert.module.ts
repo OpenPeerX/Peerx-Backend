@@ -9,6 +9,8 @@ import { AlertProcessor } from './alert.processor';
 import { AlertController } from './alert.controller';
 import { NotificationModule } from '../notification/notification.module';
 import { QueueName } from '../queue/queue.constants';
+import { PricePredictionModule } from '../price-prediction/price-prediction.module';
+import { PredictiveAlertService } from './predictive-alert.service';
 
 @Module({
   imports: [
@@ -24,9 +26,10 @@ import { QueueName } from '../queue/queue.constants';
       },
     }),
     NotificationModule,
+    PricePredictionModule,
   ],
   controllers: [AlertController],
-  providers: [AlertService, AlertEvaluationService, AlertProcessor],
-  exports: [AlertService],
+  providers: [AlertService, AlertEvaluationService, AlertProcessor, PredictiveAlertService],
+  exports: [AlertService, PredictiveAlertService],
 })
 export class AlertModule {}
