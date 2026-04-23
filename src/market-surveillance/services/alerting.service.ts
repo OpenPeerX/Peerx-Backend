@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, LessThan } from 'typeorm';
-import { AnomalyAlert, AlertStatus, SeverityLevel } from '../entities/anomaly-alert.entity';
+import { AnomalyAlert, AlertStatus, SeverityLevel, AnomalyType } from '../entities/anomaly-alert.entity';
 import { SuspiciousActor, ThrottleLevel } from '../entities/suspicious-actor.entity';
 import { PatternDetectionService, DetectionResult } from './pattern-detection.service';
 
@@ -54,6 +54,45 @@ export class AlertingService {
     private suspiciousActorRepository: Repository<SuspiciousActor>,
   ) {
     this.initializeCacheCleanup();
+  }
+
+  /**
+   * Create an alert manually or from pipeline
+   */
+  async createAlert(data: {
+    tradingPair: string;
+    anomalyType: AnomalyType;
+    severity: SeverityLevel;
+    confidenceScore: number;
+    description: string;
+    actorId: string;
+    evidenceData: any;
+  }): Promise<AnomalyAlert> {
+    const alert = new AnomalyAlert();
+    alert.tradingPair = data.tradingPair;
+    alert.anomalyType = data.anomalyType;
+    alert.severity = data.severity;
+    alert.confidenceScore = data.confidenceScore;
+    alert.description = data.description;
+    alert.actorId = data.actorId;
+    alert.evidenceData = data.evidenceData;
+    alert.status = AlertStatus.DETECTED;
+    alert.timestamp = new Date();
+
+    alert.explanationLog = [
+      {
+        timestamp: new Date(),
+        rule: 'PIPELINE_DETECTION',
+        reasoning: data.description,
+        metrics: data.evidenceData.mlScores || {},
+        modelVersion: 'ensemble_v1',
+        featureImportance: data.evidenceData.explanation?.featureImportance || {},
+      },
+    ];
+
+    const saved = await this.anomalyAlertRepository.save(alert);
+    await this.checkEscalationTriggers(saved);
+    return saved;
   }
 
   /**

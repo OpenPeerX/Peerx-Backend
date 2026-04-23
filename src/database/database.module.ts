@@ -16,6 +16,8 @@ import { PerformanceMonitoringService } from './services/performance-monitoring.
 import { DatabaseLoadBalancerService } from './services/database-load-balancer.service';
 import { DatabaseBenchmarkingService } from './services/database-benchmarking.service';
 import { DatabaseMigrationService } from './services/database-migration.service';
+import { IntelligentCacheService } from './services/intelligent-cache.service';
+import { MarketSurveillanceModule } from '../market-surveillance/market-surveillance.module';
 
 import { DatabaseController } from './database.controller';
 import { DatabaseService } from './database.service';
@@ -26,6 +28,7 @@ import { DatabaseService } from './database.service';
     ConfigModule,
     CacheModule,
     ScheduleModule.forRoot(),
+    MarketSurveillanceModule,
   ],
   controllers: [DatabaseController],
   providers: [
@@ -38,6 +41,7 @@ import { DatabaseService } from './database.service';
     DatabaseLoadBalancerService,
     DatabaseBenchmarkingService,
     DatabaseMigrationService,
+    IntelligentCacheService,
   ],
   exports: [
     DatabaseService,
@@ -49,6 +53,7 @@ import { DatabaseService } from './database.service';
     DatabaseLoadBalancerService,
     DatabaseBenchmarkingService,
     DatabaseMigrationService,
+    IntelligentCacheService,
   ],
 })
 export class DatabaseModule {}

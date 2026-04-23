@@ -17,11 +17,10 @@ export enum TradeStatus {
 @Index(['asset', 'timestamp'])
 @Index(['buyerId', 'timestamp'])
 @Index(['sellerId', 'timestamp'])
-@Index(['userId'])
-@Index(['asset'])
+@Index(['userId', 'timestamp'])
+@Index(['asset', 'status', 'timestamp'])
+@Index(['userId', 'asset', 'timestamp'])
 @Index(['createdAt'])
-@Index(['userId', 'createdAt'])
-@Index(['asset', 'createdAt'])
 export class Trade {
   @PrimaryGeneratedColumn()
   id: number;

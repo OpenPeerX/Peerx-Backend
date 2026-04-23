@@ -51,6 +51,23 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ErrorModule } from './error/error.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
+import { MarketSurveillanceModule } from './market-surveillance/market-surveillance.module';
+import { DatabaseModule } from './database/database.module';
+import { HorizontalScalingModule } from './queue/horizontal-scaling.module';
+import { MLPipelineModule } from './ml-pipeline/ml-pipeline.module';
+
+import { 
+  AnomalyAlert, 
+  OrderBookSnapshot, 
+  SuspiciousActor, 
+  ViolationEvent, 
+  HeatmapMetric, 
+  PatternTemplate 
+} from './market-surveillance/entities';
+import { TrainingJob, ModelVersion, PerformanceMetrics } from './ml-pipeline/entities';
+import { UserBalance } from './balance/entities/user-balance.entity';
+import { VirtualAsset } from './trading/entities/virtual-asset.entity';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -100,6 +117,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         RiskMetrics,
         PerformanceHistory,
         Benchmark,
+        AnomalyAlert,
+        OrderBookSnapshot,
+        SuspiciousActor,
+        ViolationEvent,
+        HeatmapMetric,
+        PatternTemplate,
+        TrainingJob,
+        ModelVersion,
+        PerformanceMetrics,
+        UserBalance,
+        VirtualAsset,
       ],
       synchronize: true,
     }),
@@ -117,6 +145,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     SocialTradingModule,
     PortfolioAnalyticsModule,
     ErrorModule,
+    MarketSurveillanceModule,
+    DatabaseModule,
+    HorizontalScalingModule,
+    MLPipelineModule,
   ],
   controllers: [AppController],
   providers: [AppService],
