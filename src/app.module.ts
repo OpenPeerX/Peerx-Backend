@@ -42,6 +42,11 @@ import { CopiedTrade } from './social-trading/entities/copied-trade.entity';
 import { StrategyComment } from './social-trading/entities/strategy-comment.entity';
 import { StrategyLike } from './social-trading/entities/strategy-like.entity';
 import { TraderRevenueShare } from './social-trading/entities/trader-revenue-share.entity';
+import { PortfolioAnalyticsModule } from './portfolio-analytics/portfolio-analytics.module';
+import { PortfolioSnapshot } from './portfolio-analytics/entities/portfolio-snapshot.entity';
+import { RiskMetrics } from './portfolio-analytics/entities/risk-metrics.entity';
+import { PerformanceHistory } from './portfolio-analytics/entities/performance-history.entity';
+import { Benchmark } from './portfolio-analytics/entities/benchmark.entity';
 
 @Module({
   imports: [
@@ -77,6 +82,10 @@ import { TraderRevenueShare } from './social-trading/entities/trader-revenue-sha
         StrategyComment,
         StrategyLike,
         TraderRevenueShare,
+        PortfolioSnapshot,
+        RiskMetrics,
+        PerformanceHistory,
+        Benchmark,
       ],
       synchronize: true,
     }),
@@ -92,6 +101,7 @@ import { TraderRevenueShare } from './social-trading/entities/trader-revenue-sha
     PricePredictionModule,
     PrivacyModule,
     SocialTradingModule,
+    PortfolioAnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
