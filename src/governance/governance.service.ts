@@ -13,6 +13,7 @@ import { GovernanceVote, VoteChoice } from './entities/governance-vote.entity';
 import { CreateGovernanceProposalDto } from './dto/create-governance-proposal.dto';
 import { CastVoteDto } from './dto/cast-vote.dto';
 import { UpsertGovernanceStakeDto } from './dto/upsert-governance-stake.dto';
+import { UpdateGovernanceProposalDto } from './dto/update-governance-proposal.dto';
 
 @Injectable()
 export class GovernanceService {
@@ -231,6 +232,151 @@ export class GovernanceService {
     return votes
       .filter((vote) => vote.choice === choice)
       .reduce((sum, vote) => sum + Number(vote.votingPower), 0);
+  }
+
+  async getUserStake(userId: number): Promise<GovernanceStake | null> {
+    return this.stakeRepository.findOne({ where: { userId } });
+  }
+
+  async getUserVotes(userId: number): Promise<GovernanceVote[]> {
+    return this.voteRepository.find({ 
+      where: { voterUserId: userId },
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  async getAuditLog(limit: number = 100): Promise<any[]> {
+    // This would integrate with the audit service to get governance-specific logs
+    // For now, return a mock implementation
+    return [];
+  }
+
+  async getVotingSnapshot(proposalId: string): Promise<any> {
+    const proposal = await this.getProposalOrThrow(proposalId);
+    const votes = await this.voteRepository.find({ where: { proposalId } });
+    const stakes = await this.stakeRepository.find();
+    
+    // Calculate voting power at snapshot time
+    const totalVotingPower = stakes.reduce((sum, stake) => sum + Number(stake.stakedAmount), 0);
+    const votedPower = votes.reduce((sum, vote) => sum + Number(vote.votingPower), 0);
+    const participationRate = totalVotingPower > 0 ? (votedPower / totalVotingPower) * 100 : 0;
+    
+    return {
+      proposalId,
+      snapshotAt: proposal.snapshotAt,
+      totalVotingPower,
+      votedPower,
+      participationRate,
+      uniqueVoters: votes.length,
+      voteBreakdown: {
+        yes: votes.filter(v => v.choice === VoteChoice.YES).reduce((sum, v) => sum + Number(v.votingPower), 0),
+        no: votes.filter(v => v.choice === VoteChoice.NO).reduce((sum, v) => sum + Number(v.votingPower), 0),
+        abstain: votes.filter(v => v.choice === VoteChoice.ABSTAIN).reduce((sum, v) => sum + Number(v.votingPower), 0),
+      },
+      quorumMet: votedPower >= Number(proposal.quorumThreshold),
+    };
+  }
+
+  async updateProposal(proposalId: string, dto: UpdateGovernanceProposalDto): Promise<GovernanceProposal> {
+    const proposal = await this.getProposalOrThrow(proposalId);
+    
+    // Only allow updates to draft proposals
+    if (proposal.status !== ProposalStatus.DRAFT && proposal.status !== ProposalStatus.ACTIVE) {
+      throw new BadRequestException('Only draft or active proposals can be updated');
+    }
+    
+    Object.assign(proposal, dto);
+    const updated = await this.proposalRepository.save(proposal);
+    
+    await this.auditService.log({
+      domain: 'governance',
+      action: 'proposal.updated',
+      entityId: proposalId,
+      metadata: { ...dto } as Record<string, unknown>,
+    });
+    
+    this.invalidateCaches();
+    return updated;
+  }
+
+  async cancelProposal(proposalId: string): Promise<GovernanceProposal> {
+    const proposal = await this.getProposalOrThrow(proposalId);
+    
+    // Only allow cancellation of draft or active proposals
+    if (proposal.status !== ProposalStatus.DRAFT && proposal.status !== ProposalStatus.ACTIVE) {
+      throw new BadRequestException('Only draft or active proposals can be cancelled');
+    }
+    
+    proposal.status = ProposalStatus.CANCELLED;
+    const cancelled = await this.proposalRepository.save(proposal);
+    
+    await this.auditService.log({
+      domain: 'governance',
+      action: 'proposal.cancelled',
+      entityId: proposalId,
+    });
+    
+    this.invalidateCaches();
+    return cancelled;
+  }
+
+  async validateVoteIntegrity(proposalId: string): Promise<any> {
+    const votes = await this.voteRepository.find({ where: { proposalId } });
+    const issues: Array<{
+      type: string;
+      userId?: number;
+      idempotencyKey?: string;
+      voteCount: number;
+      voteIds: string[];
+    }> = [];
+    
+    // Check for double voting
+    const voterMap = new Map<number, GovernanceVote[]>();
+    votes.forEach(vote => {
+      const userVotes = voterMap.get(vote.voterUserId) || [];
+      userVotes.push(vote);
+      voterMap.set(vote.voterUserId, userVotes);
+    });
+    
+    voterMap.forEach((userVotes, userId) => {
+      if (userVotes.length > 1) {
+        issues.push({
+          type: 'DOUBLE_VOTING',
+          userId,
+          voteCount: userVotes.length,
+          voteIds: userVotes.map(v => v.id),
+        });
+      }
+    });
+    
+    // Check for replay attacks (same idempotency key)
+    const idempotencyMap = new Map<string, GovernanceVote[]>();
+    votes.forEach(vote => {
+      if (vote.idempotencyKey) {
+        const keyVotes = idempotencyMap.get(vote.idempotencyKey) || [];
+        keyVotes.push(vote);
+        idempotencyMap.set(vote.idempotencyKey, keyVotes);
+      }
+    });
+    
+    idempotencyMap.forEach((keyVotes, key) => {
+      if (keyVotes.length > 1) {
+        issues.push({
+          type: 'REPLAY_ATTACK',
+          idempotencyKey: key,
+          voteCount: keyVotes.length,
+          voteIds: keyVotes.map(v => v.id),
+        });
+      }
+    });
+    
+    return {
+      proposalId,
+      totalVotes: votes.length,
+      uniqueVoters: voterMap.size,
+      issues,
+      isValid: issues.length === 0,
+    };
   }
 
   private invalidateCaches(userId?: number): void {

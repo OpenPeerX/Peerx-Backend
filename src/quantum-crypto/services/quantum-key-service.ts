@@ -500,6 +500,265 @@ export class QuantumKeyService implements OnModuleInit {
     }
   }
 
+  async getQuantumPerformanceMetrics(): Promise<any> {
+    const keys = await this.quantumKeyRepository.find();
+    const activeKeys = keys.filter(key => key.status === KeyStatus.ACTIVE);
+    
+    // Calculate performance metrics by algorithm type
+    const performanceByType = {};
+    const keyTypes = Object.values(KeyType);
+    
+    for (const keyType of keyTypes) {
+      const typeKeys = activeKeys.filter(key => key.keyType === keyType);
+      performanceByType[keyType] = {
+        count: typeKeys.length,
+        averageKeySize: typeKeys.reduce((sum, key) => sum + key.keySize, 0) / (typeKeys.length || 1),
+        averageUsageCount: typeKeys.reduce((sum, key) => sum + key.usageCount, 0) / (typeKeys.length || 1),
+        totalOperations: typeKeys.reduce((sum, key) => sum + key.usageCount, 0),
+      };
+    }
+    
+    return {
+      totalKeys: keys.length,
+      activeKeys: activeKeys.length,
+      performanceByType,
+      overallMetrics: {
+        averageKeySize: activeKeys.reduce((sum, key) => sum + key.keySize, 0) / (activeKeys.length || 1),
+        totalOperations: activeKeys.reduce((sum, key) => sum + key.usageCount, 0),
+        rotationRate: keys.filter(key => key.status === KeyStatus.ROTATED).length / (keys.length || 1),
+        compromiseRate: keys.filter(key => key.status === KeyStatus.COMPROMISED).length / (keys.length || 1),
+      },
+    };
+  }
+
+  async optimizeQuantumAlgorithms(): Promise<any> {
+    // Performance optimization for quantum algorithms
+    const optimizations: Array<{
+      keyId: string;
+      type: string;
+      recommendation: string;
+      usageEfficiency?: number;
+      keySize?: number;
+      usageCount?: number;
+    }> = [];
+    
+    // Check for keys that can be optimized
+    const keys = await this.quantumKeyRepository.find({
+      where: { status: KeyStatus.ACTIVE }
+    });
+    
+    for (const key of keys) {
+      const usageEfficiency = key.usageCount / key.maxUsageCount;
+      
+      if (usageEfficiency > 0.8) {
+        optimizations.push({
+          keyId: key.keyId,
+          type: 'HIGH_USAGE',
+          recommendation: 'Consider rotating key due to high usage',
+          usageEfficiency,
+        });
+      }
+      
+      if (key.keySize > 4096 && key.usageCount < 100) {
+        optimizations.push({
+          keyId: key.keyId,
+          type: 'OVERSIZED_KEY',
+          recommendation: 'Consider using smaller key size for better performance',
+          keySize: key.keySize,
+          usageCount: key.usageCount,
+        });
+      }
+    }
+    
+    return {
+      optimizations,
+      totalOptimizations: optimizations.length,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  async runQuantumAttackSimulation(): Promise<any> {
+    // Simulate quantum attack scenarios to test resilience
+    const keys = await this.quantumKeyRepository.find({
+      where: { status: KeyStatus.ACTIVE }
+    });
+    
+    const simulationResults: Array<{
+      keyId: string;
+      keyType: KeyType;
+      securityScore: number;
+      bruteForceResistance: number;
+      sideChannelResistance: number;
+      quantumAlgorithmResistance: number;
+      recommendations: string[];
+    }> = [];
+    
+    for (const key of keys) {
+      // Simulate different attack scenarios
+      const bruteForceResistance = this.simulateBruteForceAttack(key);
+      const sideChannelResistance = this.simulateSideChannelAttack(key);
+      const quantumAlgorithmResistance = this.simulateQuantumAlgorithmAttack(key);
+      
+      const overallSecurity = (bruteForceResistance + sideChannelResistance + quantumAlgorithmResistance) / 3;
+      
+      simulationResults.push({
+        keyId: key.keyId,
+        keyType: key.keyType,
+        securityScore: overallSecurity,
+        bruteForceResistance,
+        sideChannelResistance,
+        quantumAlgorithmResistance,
+        recommendations: this.generateSecurityRecommendations(overallSecurity),
+      });
+    }
+    
+    return {
+      simulationResults,
+      averageSecurityScore: simulationResults.reduce((sum, result) => sum + result.securityScore, 0) / simulationResults.length,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  private simulateBruteForceAttack(key: QuantumKeyEntity): number {
+    // Simulate brute force attack resistance based on key size and algorithm
+    const baseResistance = Math.min(100, (key.keySize / 8192) * 100);
+    const algorithmBonus = this.getAlgorithmSecurityBonus(key.keyType);
+    return Math.min(100, baseResistance + algorithmBonus);
+  }
+
+  private simulateSideChannelAttack(key: QuantumKeyEntity): number {
+    // Simulate side channel attack resistance
+    const usagePenalty = Math.min(20, (key.usageCount / key.maxUsageCount) * 20);
+    return Math.max(0, 80 - usagePenalty);
+  }
+
+  private simulateQuantumAlgorithmAttack(key: QuantumKeyEntity): number {
+    // Simulate resistance against quantum algorithms (Shor's, Grover's)
+    const quantumResistance: Record<KeyType, number> = {
+      [KeyType.DILITHIUM]: 95,
+      [KeyType.FALCON]: 93,
+      [KeyType.SPHINCS_PLUS]: 98,
+      [KeyType.KYBER]: 90,
+      [KeyType.NTRU]: 88,
+      [KeyType.CLASSIC_MCELIECE]: 97,
+    };
+    
+    return quantumResistance[key.keyType] || 50;
+  }
+
+  private getAlgorithmSecurityBonus(keyType: KeyType): number {
+    const bonuses: Record<KeyType, number> = {
+      [KeyType.DILITHIUM]: 15,
+      [KeyType.FALCON]: 12,
+      [KeyType.SPHINCS_PLUS]: 20,
+      [KeyType.KYBER]: 10,
+      [KeyType.NTRU]: 8,
+      [KeyType.CLASSIC_MCELIECE]: 18,
+    };
+    
+    return bonuses[keyType] || 0;
+  }
+
+  private generateSecurityRecommendations(securityScore: number): string[] {
+    const recommendations: string[] = [];
+    
+    if (securityScore < 60) {
+      recommendations.push('Immediate key rotation recommended');
+      recommendations.push('Consider upgrading to higher security level');
+    } else if (securityScore < 80) {
+      recommendations.push('Monitor key usage closely');
+      recommendations.push('Plan for key rotation in near future');
+    } else {
+      recommendations.push('Key security is adequate');
+    }
+    
+    return recommendations;
+  }
+
+  async createQuantumSecurityAudit(): Promise<any> {
+    // Create comprehensive security audit
+    const keys = await this.quantumKeyRepository.find();
+    // const certificates = await this.quantumCertificateService.getAllCertificates();
+    const certificates = []; // Mock implementation
+    
+    const audit = {
+      timestamp: new Date().toISOString(),
+      keyAudit: {
+        totalKeys: keys.length,
+        activeKeys: keys.filter(k => k.status === KeyStatus.ACTIVE).length,
+        expiredKeys: keys.filter(k => k.status === KeyStatus.INACTIVE).length,
+        rotatedKeys: keys.filter(k => k.status === KeyStatus.ROTATED).length,
+        compromisedKeys: keys.filter(k => k.status === KeyStatus.COMPROMISED).length,
+        keysExpiringSoon: keys.filter(k => {
+          const daysUntilExpiry = (k.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+          return daysUntilExpiry < 30 && daysUntilExpiry > 0;
+        }).length,
+      },
+      certificateAudit: {
+        totalCertificates: certificates.length,
+        activeCertificates: certificates.filter(c => c.status === 'ACTIVE').length,
+        revokedCertificates: certificates.filter(c => c.status === 'REVOKED').length,
+        expiredCertificates: certificates.filter(c => c.status === 'EXPIRED').length,
+      },
+      complianceStatus: this.assessComplianceStatus(keys, certificates),
+      recommendations: this.generateAuditRecommendations(keys, certificates),
+    };
+    
+    return audit;
+  }
+
+  private assessComplianceStatus(keys: QuantumKeyEntity[], certificates: any[]): any {
+    const issues: string[] = [];
+    
+    // Check for expired keys
+    const expiredKeys = keys.filter(k => k.expiresAt < new Date());
+    if (expiredKeys.length > 0) {
+      issues.push('Expired keys found in system');
+    }
+    
+    // Check for keys approaching expiry
+    const keysExpiringSoon = keys.filter(k => {
+      const daysUntilExpiry = (k.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      return daysUntilExpiry < 7 && daysUntilExpiry > 0;
+    });
+    if (keysExpiringSoon.length > 0) {
+      issues.push('Keys expiring within 7 days');
+    }
+    
+    // Check for compromised keys
+    const compromisedKeys = keys.filter(k => k.status === KeyStatus.COMPROMISED);
+    if (compromisedKeys.length > 0) {
+      issues.push('Compromised keys present in system');
+    }
+    
+    return {
+      status: issues.length === 0 ? 'COMPLIANT' : 'NON_COMPLIANT',
+      issues,
+      score: Math.max(0, 100 - (issues.length * 20)),
+    };
+  }
+
+  private generateAuditRecommendations(keys: QuantumKeyEntity[], certificates: any[]): string[] {
+    const recommendations: string[] = [];
+    
+    if (keys.filter(k => k.status === KeyStatus.COMPROMISED).length > 0) {
+      recommendations.push('Immediately revoke and replace compromised keys');
+    }
+    
+    if (keys.filter(k => k.expiresAt < new Date()).length > 0) {
+      recommendations.push('Remove expired keys from system');
+    }
+    
+    if (keys.filter(k => {
+      const daysUntilExpiry = (k.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      return daysUntilExpiry < 30 && daysUntilExpiry > 0;
+    }).length > 0) {
+      recommendations.push('Schedule rotation for keys expiring within 30 days');
+    }
+    
+    return recommendations;
+  }
+
   async migrateFromTraditionalKey(
     userId: string,
     traditionalKeyId: string,

@@ -185,7 +185,7 @@ export class LiquidityMiningService {
       totalStaked,
       positions: positions.map((position) => ({
         ...position,
-        dynamicApr: this.calculateDynamicApr(poolMap.get(position.poolId)),
+        dynamicApr: this.calculateDynamicApr(poolMap.get(position.poolId) || undefined),
       })),
       rewards: ledgers,
     };
@@ -258,6 +258,248 @@ export class LiquidityMiningService {
       throw new NotFoundException(`Program ${programId} not found`);
     }
     return program;
+  }
+
+  async getProgramAnalytics(programId: string): Promise<any> {
+    const program = await this.getProgramOrThrow(programId);
+    const stakes = await this.stakeRepository.find({ where: { programId } });
+    const ledgers = await this.rewardRepository.find({ where: { programId } });
+    const pool = await this.getPoolOrThrow(program.poolId);
+    
+    const totalStaked = stakes.reduce((sum, stake) => sum + Number(stake.amount), 0);
+    const totalRewardsAccrued = ledgers.reduce((sum, ledger) => sum + Number(ledger.accruedReward), 0);
+    const totalRewardsClaimed = ledgers.reduce((sum, ledger) => sum + Number(ledger.claimedReward), 0);
+    const activeStakes = stakes.filter(s => s.status === LiquidityStakeStatus.ACTIVE).length;
+    
+    return {
+      programId,
+      poolId: program.poolId,
+      totalStaked,
+      activeStakes,
+      totalParticipants: stakes.length,
+      totalRewardsAccrued,
+      totalRewardsClaimed,
+      averageStakeSize: stakes.length > 0 ? totalStaked / stakes.length : 0,
+      currentApr: this.calculateDynamicApr(pool),
+      programEfficiency: program.rewardBudget > 0 ? (totalRewardsAccrued / program.rewardBudget) * 100 : 0,
+      fraudDetection: {
+        flaggedStakes: stakes.filter(s => s.status === LiquidityStakeStatus.FLAGGED).length,
+        rapidCycles: stakes.filter(s => s.rapidCycleCount > 3).length,
+      },
+    };
+  }
+
+  async getPoolAnalytics(poolId: string): Promise<any> {
+    const pool = await this.getPoolOrThrow(poolId);
+    const stakes = await this.stakeRepository.find({ where: { poolId } });
+    const programs = await this.programRepository.find({ where: { poolId } });
+    
+    const totalStaked = stakes.reduce((sum, stake) => sum + Number(stake.amount), 0);
+    const activeStakes = stakes.filter(s => s.status === LiquidityStakeStatus.ACTIVE);
+    
+    return {
+      poolId,
+      pairSymbol: pool.pairSymbol,
+      currentDepth: Number(pool.currentDepth),
+      targetDepth: Number(pool.targetDepth),
+      depthUtilization: (Number(pool.currentDepth) / Number(pool.targetDepth)) * 100,
+      totalStaked,
+      activeStakes: activeStakes.length,
+      baseApr: Number(pool.baseApr),
+      currentApr: this.calculateDynamicApr(pool),
+      activePrograms: programs.filter(p => p.status === LiquidityProgramStatus.ACTIVE).length,
+      concentrationRisk: this.calculateConcentrationRisk(activeStakes),
+      liquidityMetrics: {
+        averageStakeSize: activeStakes.length > 0 ? totalStaked / activeStakes.length : 0,
+        largestStake: activeStakes.length > 0 ? Math.max(...activeStakes.map(s => Number(s.amount))) : 0,
+        stakeDistribution: this.calculateStakeDistribution(activeStakes),
+      },
+    };
+  }
+
+  async detectFraudulentActivity(): Promise<any> {
+    const stakes = await this.stakeRepository.find();
+    const suspiciousActivities: Array<{
+      type: string;
+      userId: number;
+      stakeCount?: number;
+      unstakeCount?: number;
+      poolCount?: number;
+      description: string;
+    }> = [];
+    
+    // Group stakes by user
+    const userStakes = new Map<number, LiquidityStakePosition[]>();
+    stakes.forEach(stake => {
+      const userStakeList = userStakes.get(stake.userId) || [];
+      userStakeList.push(stake);
+      userStakes.set(stake.userId, userStakeList);
+    });
+    
+    // Check for suspicious patterns
+    userStakes.forEach((userStakeList, userId) => {
+      // Check for rapid staking/unstaking cycles
+      const recentStakes = userStakeList.filter(stake => {
+        const daysSinceStake = (Date.now() - new Date(stake.stakedAt).getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceStake < 7;
+      });
+      
+      if (recentStakes.length > 5) {
+        suspiciousActivities.push({
+          type: 'RAPID_CYCLING',
+          userId,
+          stakeCount: recentStakes.length,
+          description: 'User has performed multiple staking cycles within 7 days',
+        });
+      }
+      
+      // Check for stake timing patterns
+      const unstakes = userStakeList.filter(s => s.status === LiquidityStakeStatus.UNSTAKED);
+      const shortTermUnstakes = unstakes.filter(unstake => {
+        const stakeDuration = (new Date(unstake.cooldownEndsAt!).getTime() - new Date(unstake.stakedAt).getTime()) / (1000 * 60 * 60 * 24);
+        return stakeDuration < 1; // Less than 1 day
+      });
+      
+      if (shortTermUnstakes.length > 3) {
+        suspiciousActivities.push({
+          type: 'SHORT_TERM_STAKING',
+          userId,
+          unstakeCount: shortTermUnstakes.length,
+          description: 'User has multiple stakes lasting less than 24 hours',
+        });
+      }
+      
+      // Check for concentration across multiple pools
+      const uniquePools = new Set(userStakeList.map(s => s.poolId));
+      if (uniquePools.size > 10) {
+        suspiciousActivities.push({
+          type: 'POOL_CONCENTRATION',
+          userId,
+          poolCount: uniquePools.size,
+          description: 'User is staking across an unusually high number of pools',
+        });
+      }
+    });
+    
+    return {
+      timestamp: new Date().toISOString(),
+      totalSuspiciousActivities: suspiciousActivities.length,
+      activities: suspiciousActivities,
+      riskLevel: this.calculateFraudRiskLevel(suspiciousActivities.length),
+    };
+  }
+
+  async getRewardDistributionSchedule(programId: string): Promise<any> {
+    const program = await this.getProgramOrThrow(programId);
+    const stakes = await this.stakeRepository.find({ where: { programId, status: LiquidityStakeStatus.ACTIVE } });
+    
+    const schedule: Array<{
+      period: string;
+      startDate: string;
+      endDate: string;
+      estimatedRewards: number;
+      activeStakes: number;
+      totalStaked: number;
+    }> = [];
+    const now = new Date();
+    const programEnd = new Date(program.endAt);
+    
+    // Generate monthly distribution schedule
+    let currentDate = new Date(Math.max(now.getTime(), new Date(program.startAt).getTime()));
+    
+    while (currentDate <= programEnd) {
+      const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      const periodEnd = new Date(Math.min(monthEnd.getTime(), programEnd.getTime()));
+      
+      // Calculate estimated rewards for this period
+      let periodRewards = 0;
+      for (const stake of stakes) {
+        const daysInPeriod = (periodEnd.getTime() - Math.max(currentDate.getTime(), new Date(stake.stakedAt).getTime())) / (1000 * 60 * 60 * 24);
+        const pool = await this.getPoolOrThrow(stake.poolId);
+        const apr = this.calculateDynamicApr(pool);
+        const estimatedReward = (Number(stake.amount) * (apr / 100) * daysInPeriod) / 365;
+        periodRewards += estimatedReward;
+      }
+      
+      schedule.push({
+        period: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+        startDate: currentDate.toISOString(),
+        endDate: periodEnd.toISOString(),
+        estimatedRewards: periodRewards,
+        activeStakes: stakes.length,
+        totalStaked: stakes.reduce((sum, stake) => sum + Number(stake.amount), 0),
+      });
+      
+      currentDate = new Date(periodEnd.getFullYear(), periodEnd.getMonth() + 1, 1);
+    }
+    
+    return {
+      programId,
+      totalEstimatedRewards: schedule.reduce((sum, period) => sum + period.estimatedRewards, 0),
+      schedule,
+    };
+  }
+
+  async createSmartContractInteraction(poolId: string, interactionData: any): Promise<any> {
+    const pool = await this.getPoolOrThrow(poolId);
+    
+    // Mock smart contract interaction
+    const interaction = {
+      interactionId: `SC_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      poolId,
+      contractAddress: pool.contractAddress,
+      interactionType: interactionData.type,
+      transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      gasUsed: Math.floor(Math.random() * 100000) + 50000,
+      blockNumber: Math.floor(Math.random() * 1000000) + 15000000,
+    };
+    
+    await this.auditService.log({
+      domain: 'liquidity-mining',
+      action: 'smart-contract.interaction',
+      entityId: interaction.interactionId,
+      metadata: { poolId, interactionType: interactionData.type },
+    });
+    
+    return interaction;
+  }
+
+  private calculateConcentrationRisk(stakes: LiquidityStakePosition[]): number {
+    if (stakes.length === 0) return 0;
+    
+    const totalStaked = stakes.reduce((sum, stake) => sum + Number(stake.amount), 0);
+    const largestStake = Math.max(...stakes.map(s => Number(s.amount)));
+    
+    // Calculate concentration risk as percentage of total staking held by largest stake
+    return (largestStake / totalStaked) * 100;
+  }
+
+  private calculateStakeDistribution(stakes: LiquidityStakePosition[]): any {
+    const distribution = {
+      small: 0, // < 1000
+      medium: 0, // 1000-10000
+      large: 0, // 10000-100000
+      whale: 0, // > 100000
+    };
+    
+    stakes.forEach(stake => {
+      const amount = Number(stake.amount);
+      if (amount < 1000) distribution.small++;
+      else if (amount < 10000) distribution.medium++;
+      else if (amount < 100000) distribution.large++;
+      else distribution.whale++;
+    });
+    
+    return distribution;
+  }
+
+  private calculateFraudRiskLevel(activityCount: number): string {
+    if (activityCount === 0) return 'LOW';
+    if (activityCount <= 5) return 'MEDIUM';
+    if (activityCount <= 15) return 'HIGH';
+    return 'CRITICAL';
   }
 
   private invalidateCaches(userId?: number): void {

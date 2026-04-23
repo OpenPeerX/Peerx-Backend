@@ -17,6 +17,8 @@ import {
 import { OptionPosition } from './entities/option-position.entity';
 import { CreateOptionContractDto } from './dto/create-option-contract.dto';
 import { PlaceOptionOrderDto } from './dto/place-option-order.dto';
+import { CancelOptionOrderDto } from './dto/cancel-option-order.dto';
+import { UpdateOptionContractDto } from './dto/update-option-contract.dto';
 
 @Injectable()
 export class OptionsService {
@@ -341,6 +343,185 @@ export class OptionsService {
     return contract.optionType === OptionType.CALL
       ? Math.max(0, settlementPrice - strike)
       : Math.max(0, strike - settlementPrice);
+  }
+
+  async getContract(contractId: string): Promise<OptionContract> {
+    return this.getContractOrThrow(contractId);
+  }
+
+  async updateContract(contractId: string, dto: UpdateOptionContractDto): Promise<OptionContract> {
+    const contract = await this.getContractOrThrow(contractId);
+    Object.assign(contract, dto);
+    const updated = await this.contractRepository.save(contract);
+    await this.auditService.log({
+      domain: 'options',
+      action: 'contract.updated',
+      entityId: contractId,
+      metadata: { ...dto } as Record<string, unknown>,
+    });
+    this.invalidateOptionsCaches();
+    return updated;
+  }
+
+  async deleteContract(contractId: string): Promise<void> {
+    const contract = await this.getContractOrThrow(contractId);
+    await this.contractRepository.remove(contract);
+    await this.auditService.log({
+      domain: 'options',
+      action: 'contract.deleted',
+      entityId: contractId,
+    });
+    this.invalidateOptionsCaches();
+  }
+
+  async getOrder(orderId: string): Promise<OptionOrder> {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+    if (!order) {
+      throw new NotFoundException(`Option order ${orderId} not found`);
+    }
+    return order;
+  }
+
+  async cancelOrder(orderId: string, dto: CancelOptionOrderDto): Promise<OptionOrder> {
+    const order = await this.getOrder(orderId);
+    if (order.status !== OptionOrderStatus.OPEN && order.status !== OptionOrderStatus.PARTIALLY_FILLED) {
+      throw new BadRequestException('Order cannot be cancelled');
+    }
+    
+    order.status = OptionOrderStatus.CANCELLED;
+    const cancelled = await this.orderRepository.save(order);
+    
+    await this.auditService.log({
+      domain: 'options',
+      action: 'order.cancelled',
+      actorUserId: order.userId,
+      entityId: orderId,
+      metadata: { reason: dto.reason },
+    });
+    
+    this.invalidateOptionsCaches(order.userId);
+    return cancelled;
+  }
+
+  async getUserOrders(userId: number, status?: string): Promise<OptionOrder[]> {
+    const where: any = { userId };
+    if (status) {
+      where.status = status;
+    }
+    return this.orderRepository.find({ where, order: { createdAt: 'DESC' } });
+  }
+
+  async getUserRisk(userId: number): Promise<any> {
+    const positions = await this.positionRepository.find({ where: { userId } });
+    const contracts = await this.contractRepository.findByIds(
+      positions.map(p => p.contractId)
+    );
+    
+    let totalMarginHeld = 0;
+    let totalUnrealizedPnl = 0;
+    let totalRealizedPnl = 0;
+    const riskBreakdown: Array<{
+      contractId: string;
+      underlyingAsset: string;
+      optionType: OptionType;
+      strikePrice: number;
+      expiryAt: Date;
+      longQuantity: number;
+      shortQuantity: number;
+      marginHeld: number;
+      unrealizedPnl: number;
+      realizedPnl: number;
+      greeks: Record<string, number>;
+    }> = [];
+    
+    for (const position of positions) {
+      const contract = contracts.find(c => c.id === position.contractId);
+      if (!contract) continue;
+      
+      const greeks = this.calculateGreeks(contract);
+      totalMarginHeld += Number(position.marginHeld);
+      totalUnrealizedPnl += Number(position.unrealizedPnl);
+      totalRealizedPnl += Number(position.realizedPnl);
+      
+      riskBreakdown.push({
+        contractId: position.contractId,
+        underlyingAsset: contract.underlyingAsset,
+        optionType: contract.optionType,
+        strikePrice: contract.strikePrice,
+        expiryAt: contract.expiryAt,
+        longQuantity: position.longQuantity,
+        shortQuantity: position.shortQuantity,
+        marginHeld: position.marginHeld,
+        unrealizedPnl: position.unrealizedPnl,
+        realizedPnl: position.realizedPnl,
+        greeks,
+      });
+    }
+    
+    return {
+      userId,
+      totalMarginHeld,
+      totalUnrealizedPnl,
+      totalRealizedPnl,
+      netPnl: totalUnrealizedPnl + totalRealizedPnl,
+      positionCount: positions.length,
+      riskBreakdown,
+    };
+  }
+
+  async getContractGreeks(contractId: string): Promise<any> {
+    const contract = await this.getContractOrThrow(contractId);
+    const greeks = this.calculateGreeks(contract);
+    
+    return {
+      contractId,
+      underlyingAsset: contract.underlyingAsset,
+      optionType: contract.optionType,
+      strikePrice: contract.strikePrice,
+      markPrice: contract.markPrice,
+      volatility: contract.volatility,
+      expiryAt: contract.expiryAt,
+      greeks,
+      timeToExpiry: Math.max(0, (contract.expiryAt.getTime() - Date.now()) / (365 * 24 * 60 * 60 * 1000)),
+    };
+  }
+
+  async getOrderBook(contractId: string): Promise<any> {
+    const contract = await this.getContractOrThrow(contractId);
+    const buyOrders = await this.orderRepository.find({
+      where: { contractId, side: OptionOrderSide.BUY, status: OptionOrderStatus.OPEN },
+      order: { limitPrice: 'DESC', createdAt: 'ASC' },
+    });
+    
+    const sellOrders = await this.orderRepository.find({
+      where: { contractId, side: OptionOrderSide.SELL, status: OptionOrderStatus.OPEN },
+      order: { limitPrice: 'ASC', createdAt: 'ASC' },
+    });
+    
+    return {
+      contractId,
+      underlyingAsset: contract.underlyingAsset,
+      markPrice: contract.markPrice,
+      buys: buyOrders.map(order => ({
+        orderId: order.id,
+        price: order.limitPrice || contract.markPrice,
+        quantity: Number(order.quantity) - Number(order.filledQuantity),
+        totalQuantity: order.quantity,
+      })),
+      sells: sellOrders.map(order => ({
+        orderId: order.id,
+        price: order.limitPrice || contract.markPrice,
+        quantity: Number(order.quantity) - Number(order.filledQuantity),
+        totalQuantity: order.quantity,
+      })),
+      spread: this.calculateSpread(buyOrders, sellOrders, contract.markPrice),
+    };
+  }
+
+  private calculateSpread(buyOrders: OptionOrder[], sellOrders: OptionOrder[], markPrice: number): number {
+    const bestBid = buyOrders.length > 0 ? Math.max(...buyOrders.map(o => Number(o.limitPrice || markPrice))) : 0;
+    const bestAsk = sellOrders.length > 0 ? Math.min(...sellOrders.map(o => Number(o.limitPrice || markPrice))) : 0;
+    return bestAsk - bestBid;
   }
 
   private invalidateOptionsCaches(userId?: number): void {
