@@ -7,6 +7,7 @@ import { AlertingService } from './services/alerting.service';
 import { ActorThrottlingService } from './services/actor-throttling.service';
 import { VisualizationService } from './services/visualization.service';
 import { BacktestService } from './services/backtest.service';
+import { AnomalyDetectionPipeline } from './services/anomaly-detection-pipeline.service';
 import {
   AnomalyAlert,
   OrderBookSnapshot,
@@ -35,6 +36,7 @@ import {
     ActorThrottlingService,
     VisualizationService,
     BacktestService,
+    AnomalyDetectionPipeline,
   ],
   exports: [
     PatternDetectionService,
@@ -43,6 +45,7 @@ import {
     ActorThrottlingService,
     VisualizationService,
     BacktestService,
+    AnomalyDetectionPipeline,
   ],
 })
 export class MarketSurveillanceModule {}

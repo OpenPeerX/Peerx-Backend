@@ -101,12 +101,121 @@ export class PatternDetectionService {
       const spoofingBidAskDetection = this.detectSpoofingBidAsk(snapshot);
       if (spoofingBidAskDetection) detections.push(spoofingBidAskDetection);
 
+      const visualPatterns = this.detectVisualPatterns(snapshot);
+      if (visualPatterns && visualPatterns.length > 0) detections.push(...visualPatterns);
+
       this.logger.debug(`Detected ${detections.length} anomalies in ${snapshot.tradingPair}`);
       return detections;
     } catch (error) {
       this.logger.error(`Error analyzing order book: ${error.message}`);
       return [];
     }
+  }
+
+  /**
+   * VISUAL PATTERN DETECTION: Recognizes "shapes" in the order book that indicate manipulation
+   */
+  private detectVisualPatterns(snapshot: MarketSnapshot): DetectionResult[] {
+    const visualDetections: DetectionResult[] = [];
+
+    // 1. BUY/SELL WALL DETECTION (Visual "Wall" shape)
+    const buyWall = this.detectWall(snapshot, 'BUY');
+    if (buyWall) visualDetections.push(buyWall);
+
+    const sellWall = this.detectWall(snapshot, 'SELL');
+    if (sellWall) visualDetections.push(sellWall);
+
+    // 2. ORDER BOOK PINCHING (Visual "Wedge" shape)
+    const pinching = this.detectPinching(snapshot);
+    if (pinching) visualDetections.push(pinching);
+
+    return visualDetections;
+  }
+
+  /**
+   * Detects a "Wall" in the order book - a massive concentration of volume at a single price level
+   */
+  private detectWall(snapshot: MarketSnapshot, side: 'BUY' | 'SELL'): DetectionResult | null {
+    const volumeByPrice = new Map<number, number>();
+    snapshot.orders.filter(o => o.side === side).forEach(o => {
+      const price = Math.round(o.price * 100) / 100;
+      volumeByPrice.set(price, (volumeByPrice.get(price) || 0) + o.quantity);
+    });
+
+    const totalSideVolume = side === 'BUY' ? snapshot.bidVolume : snapshot.askVolume;
+    
+    for (const [price, volume] of volumeByPrice.entries()) {
+      // A wall is defined as > 40% of total side volume at a single price level
+      if (volume > totalSideVolume * 0.4 && totalSideVolume > 0) {
+        return {
+          anomalyType: AnomalyType.PRICE_MANIPULATION,
+          severity: SeverityLevel.HIGH,
+          confidenceScore: 85,
+          description: `Detected visual ${side} WALL at ${price} holding ${(volume / totalSideVolume * 100).toFixed(1)}% of total volume`,
+          detectionMetrics: {
+            wallPrice: price,
+            wallVolume: volume,
+            sidePercent: (volume / totalSideVolume * 100),
+          },
+          evidenceData: {
+            orderIds: snapshot.orders.filter(o => Math.abs(o.price - price) < 0.01).map(o => o.orderId),
+            metrics: { wallIntensity: volume / totalSideVolume },
+            pattern: { type: 'VISUAL_WALL', side, price },
+          },
+          explanation: {
+            rule: 'VISUAL_PATTERN_WALL_001',
+            reasoning: 'Massive volume concentration at a single price level creates an artificial barrier',
+            featureImportance: { volumeConcentration: 0.8, priceProximity: 0.2 },
+          },
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Detects "Pinching" - bid and ask prices being squeezed towards each other with low volume
+   */
+  private detectPinching(snapshot: MarketSnapshot): DetectionResult | null {
+    const spread = (snapshot.askVolume > 0 && snapshot.bidVolume > 0) 
+      ? (snapshot.midPrice * 2) / (snapshot.askVolume + snapshot.bidVolume) // Simplified spread proxy
+      : 0;
+
+    // This is a simplified heuristic for "pinching"
+    if (snapshot.orders.length > 50 && snapshot.midPrice > 0) {
+      const buyPrices = snapshot.orders.filter(o => o.side === 'BUY').map(o => o.price).sort((a, b) => b - a);
+      const sellPrices = snapshot.orders.filter(o => o.side === 'SELL').map(o => o.price).sort((a, b) => a - b);
+
+      if (buyPrices.length > 0 && sellPrices.length > 0) {
+        const topSpread = sellPrices[0] - buyPrices[0];
+        const avgSpread = 0.5; // Baseline
+
+        if (topSpread < avgSpread * 0.1) {
+          return {
+            anomalyType: AnomalyType.SPOOFING,
+            severity: SeverityLevel.MEDIUM,
+            confidenceScore: 70,
+            description: 'Detected visual PINCHING pattern: spread narrowed significantly below average',
+            detectionMetrics: {
+              currentSpread: topSpread,
+              averageSpread: avgSpread,
+              compressionRatio: avgSpread / topSpread,
+            },
+            evidenceData: {
+              orderIds: [],
+              metrics: { spreadCompression: avgSpread / topSpread },
+              pattern: { type: 'VISUAL_PINCHING' },
+            },
+            explanation: {
+              rule: 'VISUAL_PATTERN_PINCH_001',
+              reasoning: 'Rapid narrowing of the bid-ask spread often precedes coordinated manipulation',
+              featureImportance: { spreadCompression: 0.9, volumeContext: 0.1 },
+            },
+          };
+        }
+      }
+    }
+    return null;
   }
 
   /**
