@@ -48,6 +48,7 @@ import { RiskMetrics } from './portfolio-analytics/entities/risk-metrics.entity'
 import { PerformanceHistory } from './portfolio-analytics/entities/performance-history.entity';
 import { Benchmark } from './portfolio-analytics/entities/benchmark.entity';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ErrorModule } from './error/error.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -115,6 +116,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     PrivacyModule,
     SocialTradingModule,
     PortfolioAnalyticsModule,
+    ErrorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

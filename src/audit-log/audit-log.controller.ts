@@ -5,13 +5,16 @@ import {
   Param,
   UseGuards,
   ParseUUIDPipe,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { AuditLogService } from './audit-log.service';
-import { ApiTags, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { AuditFilterDto } from './dto/audit-filter.dto';
 
 @ApiTags('Admin / Audit')
 @ApiBearerAuth()
-@Controller('admin/audit')
+@Controller(['admin/audit', 'audit-logs'])
 export class AuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}
 
@@ -56,5 +59,18 @@ export class AuditLogController {
   @Get('timeline/:userId')
   getUserTimeline(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.auditLogService.getUserTimeline(userId);
+  }
+
+  // New endpoints for comprehensive audit trail
+  @Get()
+  @ApiResponse({ status: 200, description: 'Paginated audit history' })
+  getAuditTrail(@Query() filter: AuditFilterDto) {
+    return this.auditLogService.getAuditTrail(filter);
+  }
+
+  @Post('export')
+  @ApiResponse({ status: 200, description: 'CSV export of audit logs' })
+  exportAuditLog(@Body() dateRange: { from: Date; to: Date }) {
+    return this.auditLogService.exportAuditLog(dateRange);
   }
 }
