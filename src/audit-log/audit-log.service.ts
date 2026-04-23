@@ -8,6 +8,7 @@ import {
   AuditLog,
   AuditSeverity,
 } from 'src/common/security/audit-log.entity';
+import { AuditFilterDto } from './dto/audit-filter.dto';
 
 export interface CreateAuditLogDto {
   userId?: string;
@@ -153,5 +154,108 @@ export class AuditLogService {
       }
     }
     return delta;
+  }
+
+  /**
+   * Get audit trail with filtering and pagination
+   */
+  async getAuditTrail(filter: AuditFilterDto): Promise<{
+    data: AuditLog[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const where: any = {};
+
+    if (filter.userId) where.userId = filter.userId;
+    if (filter.eventType) where.eventType = filter.eventType;
+    if (filter.severity) where.severity = filter.severity;
+    if (filter.entityType) where.entityType = filter.entityType;
+    if (filter.entityId) where.entityId = filter.entityId;
+    if (filter.ipAddress) where.ipAddress = filter.ipAddress;
+    if (filter.requestId) where.requestId = filter.requestId;
+
+    if (filter.fromDate || filter.toDate) {
+      where.createdAt = {};
+      if (filter.fromDate) where.createdAt.gte = new Date(filter.fromDate);
+      if (filter.toDate) where.createdAt.lte = new Date(filter.toDate);
+    }
+
+    const [data, total] = await this.auditLogRepo.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: ((filter.page || 1) - 1) * (filter.limit || 50),
+      take: filter.limit || 50,
+    });
+
+    const totalPages = Math.ceil(total / (filter.limit || 50));
+
+    return {
+      data,
+      total,
+      page: filter.page || 1,
+      limit: filter.limit || 50,
+      totalPages,
+    };
+  }
+
+  /**
+   * Export audit log to CSV format
+   */
+  async exportAuditLog(dateRange: { from: Date; to: Date }): Promise<string> {
+    const logs = await this.auditLogRepo.find({
+      where: {
+        createdAt: Between(dateRange.from, dateRange.to),
+      },
+      order: { createdAt: 'ASC' },
+    });
+
+    const headers = [
+      'ID',
+      'User ID',
+      'Event Type',
+      'Severity',
+      'Entity Type',
+      'Entity ID',
+      'Before State',
+      'After State',
+      'Metadata',
+      'IP Address',
+      'User Agent',
+      'Request ID',
+      'Checksum',
+      'Previous Checksum',
+      'Created At',
+    ];
+
+    const csvRows = [headers.join(',')];
+
+    for (const log of logs) {
+      const row = [
+        log.id,
+        log.userId || '',
+        log.eventType,
+        log.severity,
+        log.entityType || '',
+        log.entityId || '',
+        this.escapeCSV(JSON.stringify(log.beforeState || {})),
+        this.escapeCSV(JSON.stringify(log.afterState || {})),
+        this.escapeCSV(JSON.stringify(log.metadata || {})),
+        log.ipAddress || '',
+        this.escapeCSV(log.userAgent || ''),
+        log.requestId || '',
+        log.checksum,
+        log.previousChecksum || '',
+        log.createdAt.toISOString(),
+      ];
+      csvRows.push(row.map(field => `"${field}"`).join(','));
+    }
+
+    return csvRows.join('\n');
+  }
+
+  private escapeCSV(value: string): string {
+    return value.replace(/"/g, '""');
   }
 }

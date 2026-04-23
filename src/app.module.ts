@@ -48,6 +48,7 @@ import { RiskMetrics } from './portfolio-analytics/entities/risk-metrics.entity'
 import { PerformanceHistory } from './portfolio-analytics/entities/performance-history.entity';
 import { Benchmark } from './portfolio-analytics/entities/benchmark.entity';
 import { CacheModule } from '@nestjs/cache-manager';
+import { ErrorModule } from './error/error.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 import { MarketSurveillanceModule } from './market-surveillance/market-surveillance.module';
@@ -143,6 +144,7 @@ import { VirtualAsset } from './trading/entities/virtual-asset.entity';
     PrivacyModule,
     SocialTradingModule,
     PortfolioAnalyticsModule,
+    ErrorModule,
     MarketSurveillanceModule,
     DatabaseModule,
     HorizontalScalingModule,
