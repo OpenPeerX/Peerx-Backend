@@ -290,4 +290,83 @@ export class TradingService {
   async getAssetTrades(asset: string, limit = 100) {
     return this.matchingEngine.getAssetTrades(asset, limit);
   }
+
+  /**
+   * Batch load trades for multiple users - optimized for DataLoader
+   * Reduces N+1 queries by fetching all user trades in a single query
+   */
+  async getTradesForUsers(userIds: string[]): Promise<Record<string, Trade[]>> {
+    const startTime = Date.now();
+    
+    // Single query to get all trades for all users
+    const trades = await this.tradeRepository
+      .createQueryBuilder('trade')
+      .where('trade.userId IN (:...userIds)', { userIds })
+      .orderBy('trade.timestamp', 'DESC')
+      .getMany();
+
+    // Group trades by user
+    const tradesByUser: Record<string, Trade[]> = {};
+    userIds.forEach(userId => {
+      tradesByUser[userId] = [];
+    });
+
+    trades.forEach(trade => {
+      if (tradesByUser[trade.userId]) {
+        tradesByUser[trade.userId].push(trade);
+      }
+    });
+
+    const duration = Date.now() - startTime;
+    this.logger.log(`Batch loaded trades for ${userIds.length} users in ${duration}ms (${trades.length} total trades)`);
+
+    return tradesByUser;
+  }
+
+  /**
+   * Batch load trades for multiple assets - optimized for DataLoader
+   */
+  async getTradesForAssets(assets: string[]): Promise<Record<string, Trade[]>> {
+    const startTime = Date.now();
+    
+    const trades = await this.tradeRepository
+      .createQueryBuilder('trade')
+      .where('trade.asset IN (:...assets)', { assets })
+      .orderBy('trade.timestamp', 'DESC')
+      .limit(1000) // Limit to prevent memory issues
+      .getMany();
+
+    const tradesByAsset: Record<string, Trade[]> = {};
+    assets.forEach(asset => {
+      tradesByAsset[asset] = [];
+    });
+
+    trades.forEach(trade => {
+      if (tradesByAsset[trade.asset]) {
+        tradesByAsset[trade.asset].push(trade);
+      }
+    });
+
+    const duration = Date.now() - startTime;
+    this.logger.log(`Batch loaded trades for ${assets.length} assets in ${duration}ms (${trades.length} total trades)`);
+
+    return tradesByAsset;
+  }
+
+  /**
+   * Batch load trades by IDs - optimized for DataLoader
+   */
+  async getTradesByIds(tradeIds: number[]): Promise<Trade[]> {
+    const startTime = Date.now();
+    
+    const trades = await this.tradeRepository
+      .createQueryBuilder('trade')
+      .where('trade.id IN (:...tradeIds)', { tradeIds })
+      .getMany();
+
+    const duration = Date.now() - startTime;
+    this.logger.log(`Batch loaded ${tradeIds.length} trades by ID in ${duration}ms`);
+
+    return trades;
+  }
 }
