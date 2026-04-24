@@ -210,7 +210,7 @@ export class WaitlistService {
   }
 
   /**
-   * Manual invite by admin
+   * Manual invite by admin — notifies the user via email that they have been invited.
    */
   async invite(id: string, adminId: string): Promise<WaitlistUser> {
     const entry = await this.waitlistRepo.findOne({ where: { id } });
@@ -220,9 +220,34 @@ export class WaitlistService {
 
     entry.status = WaitlistStatus.INVITED;
     entry.invitedAt = new Date();
-    
+
     await this.waitlistRepo.save(entry);
+
+    // Notify the user that the feature is now available for them
+    try {
+      await this.sendInviteNotification(entry.email, entry.name);
+    } catch (error) {
+      this.logger.error(`Failed to send invite notification to ${entry.email}:`, error);
+      // Don't fail the invite if the notification fails
+    }
+
     return entry;
+  }
+
+  /**
+   * Send invite / feature-available notification email
+   */
+  private async sendInviteNotification(email: string, name?: string): Promise<void> {
+    const greeting = name ? `Hi ${name}` : 'Hi there';
+    const loginUrl = `${process.env.APP_URL || 'http://localhost:3000'}/login`;
+
+    await this.notificationService.send({
+      userId: 1, // system user
+      type: 'WAITLIST_INVITE',
+      channels: [NotificationChannel.Email],
+      subject: "You're invited! SwapTrade is ready for you",
+      message: `${greeting},\n\nGreat news — you've been invited to access SwapTrade!\n\nClick the link below to get started:\n\n${loginUrl}\n\nWelcome aboard,\nThe SwapTrade Team`,
+    });
   }
 
   /**
