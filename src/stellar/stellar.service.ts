@@ -1,7 +1,21 @@
 // src/stellar/stellar.service.ts
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '../config/config.service';
 import * as StellarSdk from 'stellar-sdk';
+
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
+
+export interface TransactionStatus {
+  hash: string;
+  successful: boolean;
+  ledger: number;
+  createdAt: string;
+  sourceAccount: string;
+  fee: string;
+  operationCount: number;
+  memo?: string;
+}
 
 @Injectable()
 export class StellarService implements OnModuleInit {
@@ -40,8 +54,6 @@ export class StellarService implements OnModuleInit {
 
   /**
    * Helper method to load an account from Stellar network
-   * @param publicKey Public key of the account to load
-   * @returns AccountResponse
    */
   async loadAccount(publicKey: string): Promise<StellarSdk.Horizon.AccountResponse> {
     try {
@@ -55,8 +67,6 @@ export class StellarService implements OnModuleInit {
 
   /**
    * Helper method to fetch balances for a specific account
-   * @param publicKey Public key of the account
-   * @returns Array of balances
    */
   async getBalances(publicKey: string): Promise<any[]> {
     try {
@@ -70,7 +80,6 @@ export class StellarService implements OnModuleInit {
 
   /**
    * Get the configured USDC issuer address
-   * @throws Error if USDC issuer is not configured
    */
   getUsdcIssuer(): string {
     if (!this.usdcIssuer) {
@@ -81,18 +90,13 @@ export class StellarService implements OnModuleInit {
 
   /**
    * Fetches the balance for the configured USDC asset
-   * @param publicKey Public key of the account
-   * @returns Balance string or "0" if not found
    */
   async getUsdcBalance(publicKey: string): Promise<string> {
     const balances = await this.getBalances(publicKey);
     const usdcIssuer = this.getUsdcIssuer();
-    
-    // Look for USDC balance that matches our configured issuer
-    const usdcBalance = balances.find((b: any) => 
-      b.asset_code === 'USDC' && b.asset_issuer === usdcIssuer
+    const usdcBalance = balances.find((b: any) =>
+      b.asset_code === 'USDC' && b.asset_issuer === usdcIssuer,
     );
-    
     return usdcBalance ? (usdcBalance as any).balance : '0';
   }
 
@@ -101,5 +105,61 @@ export class StellarService implements OnModuleInit {
    */
   getServer(): StellarSdk.Horizon.Server {
     return this.server;
+  }
+
+  /**
+   * Verify a transaction on the Stellar network.
+   * Returns true if the transaction exists and was successful.
+   */
+  async verifyTransaction(txHash: string): Promise<boolean> {
+    const status = await this.getTransactionStatus(txHash);
+    return status.successful;
+  }
+
+  /**
+   * Get the status of a Stellar transaction by hash, with retry logic
+   * for transient network failures.
+   */
+  async getTransactionStatus(txHash: string): Promise<TransactionStatus> {
+    let lastError: Error | undefined;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        this.logger.debug(`Fetching transaction ${txHash} (attempt ${attempt}/${MAX_RETRIES})`);
+        const tx = await this.server.transactions().transaction(txHash).call();
+
+        return {
+          hash: tx.hash,
+          successful: tx.successful,
+          ledger: tx.ledger,
+          createdAt: tx.created_at,
+          sourceAccount: tx.source_account,
+          fee: tx.fee_charged,
+          operationCount: tx.operation_count,
+          memo: tx.memo,
+        };
+      } catch (error) {
+        lastError = error as Error;
+
+        // 404 means the transaction doesn't exist — no point retrying
+        if (error?.response?.status === 404) {
+          throw new NotFoundException(`Transaction ${txHash} not found on the Stellar network`);
+        }
+
+        if (attempt < MAX_RETRIES) {
+          this.logger.warn(
+            `Transaction fetch attempt ${attempt} failed for ${txHash}: ${lastError.message}. Retrying in ${RETRY_DELAY_MS}ms…`,
+          );
+          await this.delay(RETRY_DELAY_MS * attempt);
+        }
+      }
+    }
+
+    this.logger.error(`All ${MAX_RETRIES} attempts failed for transaction ${txHash}: ${lastError?.message}`);
+    throw lastError;
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

@@ -54,9 +54,10 @@ export const ENDPOINT_RATE_LIMIT_MAP = {
 
 // User role multipliers for premium users
 export const USER_ROLE_MULTIPLIERS = {
-  ADMIN: 2,
-  STAFF: 2,
-  USER: 1
+  ADMIN: 5,
+  STAFF: 3,
+  PREMIUM: 2,
+  USER: 1,
 };
 
 // Rate limit header names
