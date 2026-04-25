@@ -1,0 +1,12 @@
+{
+  "HELLO": "Bonjour",
+  "ERROR": {
+    "UNAUTHORIZED": "Accès non autorisé",
+    "NOT_FOUND": "Ressource non trouvée",
+    "INTERNAL_SERVER_ERROR": "Erreur interne du serveur"
+  },
+  "AUTH": {
+    "MFA_REQUIRED": "Authentification multi-facteurs requise",
+    "INVALID_TOTP": "Code TOTP invalide"
+  }
+}

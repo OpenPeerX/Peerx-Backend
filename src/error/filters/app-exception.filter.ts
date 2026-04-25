@@ -8,21 +8,22 @@ import {
   Optional,
 } from '@nestjs/common';
 import { Response, Request } from 'express';
+import { I18nService } from 'nestjs-i18n';
 import { StructuredException } from '../errors/structured.exception';
 import { ErrorCodeRegistry } from '../error-code.registry';
 import { ERROR_CODES } from '../constants/error-codes';
 
-/**
- * Deterministic Global Exception Filter
- * Ensures all exceptions produce consistent, deterministic error responses
- * Maps all exception types to standardized error codes and HTTP status codes
- */
 @Catch()
 export class AppExceptionFilter implements ExceptionFilter {
+  constructor(
+    @Optional() private readonly i18n?: I18nService,
+  ) {}
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const lang = request.headers['accept-language']?.split(',')[0] || 'en';
 
     let status: HttpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
     let errorResponse: any;
@@ -84,6 +85,18 @@ export class AppExceptionFilter implements ExceptionFilter {
       errorCode,
       status,
     );
+
+    // Translate message if I18nService is available
+    if (this.i18n) {
+      try {
+        const translated = this.i18n.translate(`common.ERROR.${errorCode}`, { lang }) as string;
+        if (translated && !translated.startsWith('common.ERROR.')) {
+          errorResponse.error.message = translated;
+        }
+      } catch (e) {
+        // Fallback to default message
+      }
+    }
 
     // Log error appropriately
     this.logError(errorCode, exception, request);

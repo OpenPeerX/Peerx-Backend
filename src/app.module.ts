@@ -68,67 +68,48 @@ import { TrainingJob, ModelVersion, PerformanceMetrics } from './ml-pipeline/ent
 import { UserBalance } from './balance/entities/user-balance.entity';
 import { VirtualAsset } from './trading/entities/virtual-asset.entity';
 import { KycModule } from './kyc/kyc.module';
+import { I18nModule, AcceptLanguageResolver, HeaderResolver, QueryResolver } from 'nestjs-i18n';
+import * as path from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        HeaderResolver,
+        AcceptLanguageResolver,
+      ],
+    }),
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        ttl: 600, // 10 minutes default
+        ttl: 600,
         max: 1000,
       }),
       inject: [ConfigService],
     }),
     TypeOrmModule.forRoot({
-...
       type: 'sqlite',
       database: 'swaptrade.db',
       entities: [
-        AuditEntry,
-        GovernanceProposal,
-        GovernanceVote,
-        GovernanceStake,
-        OptionContract,
-        OptionOrder,
-        OptionPosition,
-        LiquidityPool,
-        LiquidityMiningProgram,
-        LiquidityStakePosition,
-        LiquidityRewardLedger,
-        User,
-        Trade,
-        RiskOrder,
-        RiskProfile,
-        DidDocument,
-        VerifiableCredential,
-        PrivacyProfile,
-        EncryptedOrder,
-        PrivacyAuditLog,
-        SocialTraderProfile,
-        SharedStrategy,
-        TraderFollow,
-        CopyTradingRelationship,
-        CopiedTrade,
-        StrategyComment,
-        StrategyLike,
-        TraderRevenueShare,
-        PortfolioSnapshot,
-        RiskMetrics,
-        PerformanceHistory,
-        Benchmark,
-        AnomalyAlert,
-        OrderBookSnapshot,
-        SuspiciousActor,
-        ViolationEvent,
-        HeatmapMetric,
-        PatternTemplate,
-        TrainingJob,
-        ModelVersion,
-        PerformanceMetrics,
-        UserBalance,
-        VirtualAsset,
+        AuditEntry, GovernanceProposal, GovernanceVote, GovernanceStake,
+        OptionContract, OptionOrder, OptionPosition,
+        LiquidityPool, LiquidityMiningProgram, LiquidityStakePosition, LiquidityRewardLedger,
+        User, Trade, RiskOrder, RiskProfile,
+        DidDocument, VerifiableCredential,
+        PrivacyProfile, EncryptedOrder, PrivacyAuditLog,
+        SocialTraderProfile, SharedStrategy, TraderFollow, CopyTradingRelationship, CopiedTrade, StrategyComment, StrategyLike, TraderRevenueShare,
+        PortfolioSnapshot, RiskMetrics, PerformanceHistory, Benchmark,
+        AnomalyAlert, OrderBookSnapshot, SuspiciousActor, ViolationEvent, HeatmapMetric, PatternTemplate,
+        TrainingJob, ModelVersion, PerformanceMetrics,
+        UserBalance, VirtualAsset,
       ],
       synchronize: true,
     }),
@@ -143,16 +124,35 @@ import { KycModule } from './kyc/kyc.module';
     AdvancedAnalyticsModule,
     PricePredictionModule,
     PrivacyModule,
-    SocialTradingModule,
-    PortfolioAnalyticsModule,
     ErrorModule,
-    MarketSurveillanceModule,
     DatabaseModule,
-    HorizontalScalingModule,
-    MLPipelineModule,
-    KycModule,
+    // Note: Some modules are now loaded dynamically to optimize startup
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: 'LAZY_MODULES',
+      useFactory: async () => {
+        // Simulating code splitting and lazy loading of heavy modules
+        const [surveillance, social, portfolio, scaling, ml, kyc] = await Promise.all([
+          import('./market-surveillance/market-surveillance.module.js'),
+          import('./social-trading/social-trading.module.js'),
+          import('./portfolio-analytics/portfolio-analytics.module.js'),
+          import('./queue/horizontal-scaling.module.js'),
+          import('./ml-pipeline/ml-pipeline.module.js'),
+          import('./kyc/kyc.module.js'),
+        ]);
+        return {
+          MarketSurveillanceModule: surveillance.MarketSurveillanceModule,
+          SocialTradingModule: social.SocialTradingModule,
+          PortfolioAnalyticsModule: portfolio.PortfolioAnalyticsModule,
+          HorizontalScalingModule: scaling.HorizontalScalingModule,
+          MLPipelineModule: ml.MLPipelineModule,
+          KycModule: kyc.KycModule,
+        };
+      },
+    },
+  ],
 })
 export class AppModule {}

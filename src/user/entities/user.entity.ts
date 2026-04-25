@@ -32,6 +32,15 @@ export class User {
   @Column({ type: 'decimal', precision: 18, scale: 8, default: 0 })
   totalTradeVolume: number;
 
+  @Column({ default: false })
+  mfaEnabled: boolean;
+
+  @Column({ nullable: true, select: false })
+  mfaSecret: string;
+
+  @Column('simple-array', { nullable: true, select: false })
+  mfaRecoveryCodes: string[];
+
   @UpdateDateColumn()
   lastTradeDate: Date;
 

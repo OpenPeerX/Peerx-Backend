@@ -7,9 +7,11 @@ import { DateTimeScalar } from './scalars/datetime.scalar';
 import { UserModule } from '../user/user.module';
 import { TradingModule } from '../trading/trading.module';
 import { PortfolioModule } from '../portfolio/portfolio.module';
+import { AdvancedAnalyticsModule } from '../advanced-analytics/advanced-analytics.module';
 import { UserResolver } from './resolvers/user.resolver';
 import { TradeResolver } from './resolvers/trade.resolver';
 import { PortfolioResolver } from './resolvers/portfolio.resolver';
+import { AdvancedAnalyticsResolver } from './resolvers/advanced-analytics.resolver';
 
 @Module({
   imports: [
@@ -28,7 +30,15 @@ import { PortfolioResolver } from './resolvers/portfolio.resolver';
     UserModule,
     TradingModule,
     PortfolioModule,
+    AdvancedAnalyticsModule,
   ],
-  providers: [BigIntScalar, DateTimeScalar, UserResolver, TradeResolver, PortfolioResolver],
+  providers: [
+    BigIntScalar,
+    DateTimeScalar,
+    UserResolver,
+    TradeResolver,
+    PortfolioResolver,
+    AdvancedAnalyticsResolver,
+  ],
 })
 export class GqlAppModule {}

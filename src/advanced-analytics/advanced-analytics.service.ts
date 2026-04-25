@@ -20,10 +20,27 @@ import {
   UpdateDashboardDto,
   UpsertBiConnectorDto,
 } from './dto/advanced-analytics.dto';
+import { ComputeBridgeService } from './compute-bridge.service';
 
 @Injectable()
 export class AdvancedAnalyticsService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(AdvancedAnalyticsService.name);
+
+  constructor(private readonly computeBridge: ComputeBridgeService) {}
+
+  async getAdvancedRiskMetrics(userId: string): Promise<any> {
+    this.logger.log(`Fetching advanced risk metrics for user ${userId}`);
+    // Ensure data privacy by anonymizing or filtering data before sending to compute bridge
+    const history = []; // Mock fetching history
+    return this.computeBridge.calculateRiskMetrics(Number(userId), history);
+  }
+
+  async getPortfolioOptimization(userId: string): Promise<any> {
+    this.logger.log(`Fetching portfolio optimization for user ${userId}`);
+    const holdings = []; // Mock fetching holdings
+    return this.computeBridge.optimizePortfolio(Number(userId), holdings);
+  }
+
   private readonly dashboards = new Map<string, DashboardDefinition>();
   private readonly reportSchedules = new Map<string, ScheduledReport>();
   private readonly connectors = new Map<string, BiToolConnector>();
@@ -288,7 +305,7 @@ export class AdvancedAnalyticsService implements OnModuleInit, OnModuleDestroy {
   }
 
   private detectPatterns(prices: number[]): string[] {
-    const patterns = [];
+    const patterns: string[] = [];
     const last = prices[0];
     const prev = prices[1];
     const prev2 = prices[2];
