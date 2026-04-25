@@ -1,0 +1,12 @@
+{
+  "HELLO": "こんにちは",
+  "ERROR": {
+    "UNAUTHORIZED": "許可されていないアクセス",
+    "NOT_FOUND": "リソースが見つかりません",
+    "INTERNAL_SERVER_ERROR": "内部サーバーエラー"
+  },
+  "AUTH": {
+    "MFA_REQUIRED": "多要素認証が必要です",
+    "INVALID_TOTP": "無効なTOTPコードです"
+  }
+}

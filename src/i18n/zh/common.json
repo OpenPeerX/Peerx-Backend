@@ -1,0 +1,12 @@
+{
+  "HELLO": "你好",
+  "ERROR": {
+    "UNAUTHORIZED": "未经授权的访问",
+    "NOT_FOUND": "未找到资源",
+    "INTERNAL_SERVER_ERROR": "内部服务器错误"
+  },
+  "AUTH": {
+    "MFA_REQUIRED": "需要多因素身份验证",
+    "INVALID_TOTP": "TOTP 代码无效"
+  }
+}
