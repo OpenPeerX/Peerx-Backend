@@ -67,6 +67,7 @@ import {
 import { TrainingJob, ModelVersion, PerformanceMetrics } from './ml-pipeline/entities';
 import { UserBalance } from './balance/entities/user-balance.entity';
 import { VirtualAsset } from './trading/entities/virtual-asset.entity';
+import { KycModule } from './kyc/kyc.module';
 
 @Module({
   imports: [
@@ -149,6 +150,7 @@ import { VirtualAsset } from './trading/entities/virtual-asset.entity';
     DatabaseModule,
     HorizontalScalingModule,
     MLPipelineModule,
+    KycModule,
   ],
   controllers: [AppController],
   providers: [AppService],

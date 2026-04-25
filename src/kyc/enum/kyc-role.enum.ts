@@ -1,0 +1,5 @@
+export enum KycRole {
+  KYC_OPERATOR = 'KYC_OPERATOR',
+  KYC_GOVERNANCE = 'KYC_GOVERNANCE',
+  USER = 'USER',
+}
