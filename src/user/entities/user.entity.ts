@@ -33,6 +33,9 @@ export class User {
   totalTradeVolume: number;
 
   @Column({ default: false })
+  isPremium: boolean;
+
+  @Column({ default: false })
   mfaEnabled: boolean;
 
   @Column({ nullable: true, select: false })
