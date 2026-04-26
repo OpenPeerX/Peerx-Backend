@@ -15,20 +15,37 @@ export enum WaitlistStatus {
   EXCLUDED = 'excluded',
 }
 
+export enum WaitlistType {
+  PLATFORM = 'platform',
+  PREMIUM_FEATURE = 'premium_feature',
+  ASSET_PAIR = 'asset_pair',
+}
+
 @Entity('waitlist_users')
-@Index(['email'], { unique: true })
+@Index(['email', 'type', 'targetId'], { unique: true })
 @Index(['status'])
 @Index(['referralCode'])
 @Index(['createdAt'])
+@Index(['type'])
 export class WaitlistUser {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true, length: 255 })
+  @Column({ length: 255 })
   email: string;
 
   @Column({ nullable: true, length: 255 })
   name: string;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: WaitlistType.PLATFORM,
+  })
+  type: WaitlistType;
+
+  @Column({ nullable: true, length: 255 })
+  targetId: string; // Feature name or Asset pair symbol
 
   @Column({
     type: 'varchar',
@@ -42,6 +59,9 @@ export class WaitlistUser {
 
   @Column({ nullable: true, length: 255 })
   referralSource: string;
+
+  @Column({ type: 'int', default: 0 })
+  votes: number; // For asset pair voting
 
   @Column({ type: 'datetime', nullable: true })
   verifiedAt: Date;

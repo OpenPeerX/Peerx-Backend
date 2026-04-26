@@ -19,6 +19,14 @@ export class WaitlistSignupDto {
   @IsString()
   @MaxLength(255)
   referralSource?: string;
+
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsString()
+  targetId?: string;
 }
 
 export class WaitlistVerifyDto {
