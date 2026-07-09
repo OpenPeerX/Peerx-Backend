@@ -244,7 +244,7 @@ export class QueueService {
   ): Promise<Job<EmailJobData>> {
     return this.addEmailJob({
       to: email,
-      subject: 'Welcome to SwapTrade!',
+      subject: 'Welcome to PeerX!',
       template: 'welcome',
       context: { name },
     });
