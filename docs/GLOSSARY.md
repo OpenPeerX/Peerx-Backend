@@ -1,6 +1,6 @@
 # PeerX Glossary
 
-- **PeerX** — the canonical project name. Previously known as SwapTrade.
+- **PeerX** — the canonical project name.
 - **peerx-backend** — the npm package and Docker image name.
 - **peerx.db** — the default SQLite database file used in development.
 - **Settlement** — the final, irreversible transfer of an asset between
