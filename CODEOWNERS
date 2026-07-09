@@ -1,0 +1,17 @@
+# PeerX CODEOWNERS — default reviewers for each path
+
+# Global reviewers
+*                                       @peerx/maintainers
+
+# Core platform
+/src/auth/                              @peerx/auth-team
+/src/blockchain/                        @peerx/blockchain-team
+/src/queue/                             @peerx/platform-team
+
+# Compliance & regulatory
+/src/compliance/                        @peerx/compliance-team
+/src/kyc/                               @peerx/compliance-team
+
+# Monitoring & observability
+/src/common/monitoring/                 @peerx/sre-team
+/monitoring/                            @peerx/sre-team
