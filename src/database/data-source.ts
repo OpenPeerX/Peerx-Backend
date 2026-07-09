@@ -14,10 +14,10 @@ const dataSourceConfig = {
         port: parseInt(process.env.DB_PORT || '5432'),
         username: process.env.DB_USERNAME || 'postgres',
         password: process.env.DB_PASSWORD || '',
-        database: process.env.DB_NAME || 'swaptrade',
+        database: process.env.DB_NAME || 'peerx',
       }
     : {
-        database: process.env.DATABASE_FILE || 'swaptrade.db',
+        database: process.env.DATABASE_FILE || 'peerx.db',
       }),
   entities: [VirtualAsset, UserBalance, User, Trade],
   migrations: ['src/database/migrations/*.ts'],
