@@ -42,7 +42,7 @@ export class DatabaseConfig {
   password?: string;
 
   @IsString()
-  database: string = 'swaptrade.db';
+  database: string = 'peerx.db';
 
   @IsBoolean()
   @IsOptional()
@@ -355,11 +355,11 @@ export class CorsConfig {
 export class SwaggerConfig {
   @IsString()
   @IsOptional()
-  title: string = 'SwapTrade API';
+  title: string = 'PeerX API';
 
   @IsString()
   @IsOptional()
-  description: string = 'API documentation for the SwapTrade application';
+  description: string = 'API documentation for the PeerX application';
 
   @IsString()
   @IsOptional()
