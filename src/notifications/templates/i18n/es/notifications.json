@@ -6,7 +6,7 @@
     },
     "sms": {
       "subject": "Operación Ejecutada",
-      "body": "SwapTrade: Tu operación por {{amount}} {{asset}} se ejecutó a ${{price}}. Total: ${{totalValue}}."
+      "body": "PeerX: Tu operación por {{amount}} {{asset}} se ejecutó a ${{price}}. Total: ${{totalValue}}."
     },
     "push": {
       "subject": "Operación Ejecutada",
@@ -20,7 +20,7 @@
     },
     "sms": {
       "subject": "URGENTE: Liquidación",
-      "body": "URGENTE SwapTrade: Tu posición de {{asset}} ha sido liquidada. Revisa tu cuenta ahora."
+      "body": "URGENTE PeerX: Tu posición de {{asset}} ha sido liquidada. Revisa tu cuenta ahora."
     },
     "push": {
       "subject": "⚠️ Posición Liquidad",
@@ -34,7 +34,7 @@
     },
     "sms": {
       "subject": "Depósito Recibido",
-      "body": "SwapTrade: ¡Depósito de {{amount}} {{asset}} recibido! Tx: {{txHash}}. Fondos disponibles ahora."
+      "body": "PeerX: ¡Depósito de {{amount}} {{asset}} recibido! Tx: {{txHash}}. Fondos disponibles ahora."
     },
     "push": {
       "subject": "Depósito Recibido",
@@ -48,7 +48,7 @@
     },
     "sms": {
       "subject": "Retiro Completado",
-      "body": "SwapTrade: Retiro de {{amount}} {{asset}} procesado. Tx: {{txHash}}"
+      "body": "PeerX: Retiro de {{amount}} {{asset}} procesado. Tx: {{txHash}}"
     },
     "push": {
       "subject": "Retiro Procesado",
@@ -62,7 +62,7 @@
     },
     "sms": {
       "subject": "Alerta de Seguridad",
-      "body": "SwapTrade SEGURIDAD: Nuevo inicio de sesión desde {{ipAddress}}. Si no fuiste tú, restablece tu contraseña ahora."
+      "body": "PeerX SEGURIDAD: Nuevo inicio de sesión desde {{ipAddress}}. Si no fuiste tú, restablece tu contraseña ahora."
     },
     "push": {
       "subject": "⚠️ Alerta de Seguridad",
