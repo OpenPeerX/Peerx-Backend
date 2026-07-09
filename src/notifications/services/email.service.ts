@@ -88,7 +88,7 @@ export class EmailService implements OnModuleInit {
 
   private async sendEmailInternal(notification: Notification): Promise<boolean> {
     const mailOptions = {
-      from: this.configService.get<string>('EMAIL_FROM', 'notifications@swaptrade.com'),
+      from: this.configService.get<string>('EMAIL_FROM', 'notifications@peerx.com'),
       to: notification.recipient,
       subject: notification.subject,
       html: notification.body,
