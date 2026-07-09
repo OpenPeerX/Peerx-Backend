@@ -24,7 +24,7 @@ export class ExternalApiTracingAxiosInterceptor {
 
     // ── Request interceptor — open a CLIENT span and inject traceparent ────
     axios.interceptors.request.use((config) => {
-      const tracer = trace.getTracer('swaptrade-backend');
+      const tracer = trace.getTracer('peerx-backend');
       const url = config.url ?? 'unknown';
       const method = (config.method ?? 'GET').toUpperCase();
 
