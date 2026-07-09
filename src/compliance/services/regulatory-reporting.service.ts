@@ -303,7 +303,7 @@ export class RegulatoryReportingService {
     }
 
     const ctrData = {
-      reportingEntity: 'SwapTrade',
+      reportingEntity: 'PeerX',
       transactionDetails: reportableTransactions,
       totalAmount: reportableTransactions.reduce(
         (sum, tx) => sum + tx.amount,
@@ -377,13 +377,13 @@ export class RegulatoryReportingService {
 
     const secData = {
       reportingPerson: { userId },
-      issuer: 'SwapTrade Platform',
+      issuer: 'PeerX Platform',
       transactionDate: new Date(),
       nonDerivativeSecurities: transactionIds.map((id) => ({
         transactionId: id,
       })),
       derivativeSecurities: [],
-      reportingEntity: 'SwapTrade',
+      reportingEntity: 'PeerX',
     };
 
     const reportData: ReportData = {
@@ -402,7 +402,7 @@ export class RegulatoryReportingService {
     );
 
     const catData = {
-      reportingEntity: 'SwapTrade',
+      reportingEntity: 'PeerX',
       events: orderIds.map((id) => ({
         eventTimestamp: new Date(),
         orderID: id,
@@ -642,7 +642,7 @@ export class RegulatoryReportingService {
     alertsByUser: Record<string, ComplianceAlertEntity[]>,
   ): any {
     return {
-      reportingEntity: 'SwapTrade',
+      reportingEntity: 'PeerX',
       subjects: Object.entries(alertsByUser).map(([userId, alerts]) => ({
         userId,
         suspiciousActivities: alerts.map((alert) => ({
