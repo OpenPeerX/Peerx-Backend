@@ -14,12 +14,12 @@ describe('AiTradingAssistantController', () => {
     const response = controller.ask({
       userId: 'controller-user',
       sessionId: 'controller-session',
-      message: 'Explain SwapTrade platform features',
+      message: 'Explain PeerX platform features',
       tradingHistory: [],
       portfolio: [],
     });
 
-    expect(response.answer).toContain('Welcome to SwapTrade');
+    expect(response.answer).toContain('Welcome to PeerX');
     expect(response.sessionContext).toEqual({
       sessionId: 'controller-session',
       messageCount: 1,
