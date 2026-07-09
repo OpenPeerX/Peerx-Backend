@@ -77,7 +77,7 @@ export class MonitoringInterceptor implements NestInterceptor {
     // Using startActiveSpan ensures every downstream span (TypeORM, Axios, etc.)
     // is automatically nested under this root request span.
     // -------------------------------------------------------------------------
-    const tracer = trace.getTracer('swaptrade-backend');
+    const tracer = trace.getTracer('peerx-backend');
     const span = tracer.startSpan(
       spanName,
       {
