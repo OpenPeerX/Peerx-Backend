@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class StructuredLoggerService implements LoggerService {
-  private readonly serviceName = 'swaptrade-backend';
+  private readonly serviceName = 'peerx-backend';
   private readonly serviceVersion = process.env.APP_VERSION || '1.0.0';
   private readonly environment = process.env.NODE_ENV || 'development';
   private config: LogConfig;
