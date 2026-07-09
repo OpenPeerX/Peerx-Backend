@@ -15,7 +15,7 @@ export const configSchema = Joi.object({
   DB_PORT: Joi.number().integer().min(1).max(65535).optional(),
   DB_USERNAME: Joi.string().optional(),
   DB_PASSWORD: Joi.string().optional().allow(''),
-  DB_NAME: Joi.string().default('swaptrade.db'),
+  DB_NAME: Joi.string().default('peerx.db'),
   DB_SYNCHRONIZE: Joi.boolean().default(false),
   DB_LOGGING: Joi.boolean().default(true),
   DB_AUTO_LOAD_ENTITIES: Joi.boolean().default(true),
@@ -89,9 +89,9 @@ export const configSchema = Joi.object({
   CORS_ALLOWED_HEADERS: Joi.string().default('Content-Type,Authorization'),
 
   // Swagger
-  SWAGGER_TITLE: Joi.string().default('SwapTrade API'),
+  SWAGGER_TITLE: Joi.string().default('PeerX API'),
   SWAGGER_DESCRIPTION: Joi.string().default(
-    'API documentation for the SwapTrade application',
+    'API documentation for the PeerX application',
   ),
   SWAGGER_VERSION: Joi.string().default('1.0'),
   SWAGGER_PATH: Joi.string().default('api'),
@@ -121,7 +121,7 @@ export const configSchema = Joi.object({
 
   // OpenTelemetry / Distributed Tracing (issue #401)
   OTEL_ENABLED: Joi.boolean().default(false),
-  OTEL_SERVICE_NAME: Joi.string().default('swaptrade-backend'),
+  OTEL_SERVICE_NAME: Joi.string().default('peerx-backend'),
   OTEL_SERVICE_VERSION: Joi.string().optional(),
   OTEL_EXPORTER_TYPE: Joi.string().valid('otlp', 'console').default('otlp'),
   OTEL_EXPORTER_OTLP_ENDPOINT: Joi.string()
