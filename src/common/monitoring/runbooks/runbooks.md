@@ -1,4 +1,4 @@
-# SwapTrade Backend Runbooks
+# PeerX Backend Runbooks
 
 ## Table of Contents
 - [High Error Rate](#high-error-rate)
@@ -72,10 +72,10 @@ Critical
 3. **Application Issues**
    ```bash
    # Rollback recent deployment
-   kubectl rollout undo deployment/swaptrade-backend
+   kubectl rollout undo deployment/peerx-backend
    
    # Scale up if resource exhaustion
-   kubectl scale deployment swaptrade-backend --replicas=5
+   kubectl scale deployment peerx-backend --replicas=5
    ```
 
 ### Prevention
@@ -133,7 +133,7 @@ Warning
 2. **Resource Scaling**
    ```bash
    # Scale up resources
-   kubectl patch deployment swaptrade-backend -p '{"spec":{"template":{"spec":{"containers":[{"name":"app","resources":{"limits":{"cpu":"1000m","memory":"2Gi"}}}]}}}}'
+   kubectl patch deployment peerx-backend -p '{"spec":{"template":{"spec":{"containers":[{"name":"app","resources":{"limits":{"cpu":"1000m","memory":"2Gi"}}}]}}}}'
    ```
 
 3. **Caching Strategy**
@@ -235,7 +235,7 @@ Warning
 1. **Scale Resources**
    ```bash
    # Increase memory limits
-   kubectl patch deployment swaptrade-backend -p '{"spec":{"template":{"spec":{"containers":[{"name":"app","resources":{"limits":{"memory":"4Gi"}}}]}}}}'
+   kubectl patch deployment peerx-backend -p '{"spec":{"template":{"spec":{"containers":[{"name":"app","resources":{"limits":{"memory":"4Gi"}}}]}}}}'
    ```
 
 2. **Memory Leak Investigation**
@@ -289,7 +289,7 @@ Warning
 1. **Scale Horizontally**
    ```bash
    # Add more replicas
-   kubectl scale deployment swaptrade-backend --replicas=10
+   kubectl scale deployment peerx-backend --replicas=10
    ```
 
 2. **Optimize Code**
@@ -392,7 +392,7 @@ Info
    curl -X POST http://localhost:3000/trading/swap -d '{"amount":100,"asset":"XLM"}'
    
    # Check trading logs
-   kubectl logs deployment/swaptrade-backend | grep trading
+   kubectl logs deployment/peerx-backend | grep trading
    ```
 
 2. **User Communication**
@@ -411,7 +411,7 @@ Info
 ## Service Unavailable
 
 ### Alert
-**Service Unavailable** - SwapTrade backend service is not responding
+**Service Unavailable** - PeerX backend service is not responding
 
 ### Severity
 Critical
@@ -437,16 +437,16 @@ Critical
 1. **Restart Service**
    ```bash
    # Restart deployment
-   kubectl rollout restart deployment/swaptrade-backend
+   kubectl rollout restart deployment/peerx-backend
    
    # Check rollout status
-   kubectl rollout status deployment/swaptrade-backend
+   kubectl rollout status deployment/peerx-backend
    ```
 
 2. **Rollback Deployment**
    ```bash
    # Rollback to previous version
-   kubectl rollout undo deployment/swaptrade-backend
+   kubectl rollout undo deployment/peerx-backend
    ```
 
 3. **Infrastructure Recovery**
