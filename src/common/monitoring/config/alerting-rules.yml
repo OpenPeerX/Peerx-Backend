@@ -1,5 +1,5 @@
 groups:
-  - name: swaptrade-backend.rules
+  - name: peerx-backend.rules
     rules:
       # High Error Rate Alert
       - alert: HighErrorRate
@@ -7,11 +7,11 @@ groups:
         for: 2m
         labels:
           severity: critical
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "High error rate detected"
           description: "Error rate is {{ $value }}% for the last 5 minutes"
-          runbook_url: "https://docs.swaptrade.com/runbooks/high-error-rate"
+          runbook_url: "https://docs.peerx.com/runbooks/high-error-rate"
 
       # High Latency Alert
       - alert: HighLatency
@@ -19,11 +19,11 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "High latency detected"
           description: "95th percentile latency is {{ $value }}s"
-          runbook_url: "https://docs.swaptrade.com/runbooks/high-latency"
+          runbook_url: "https://docs.peerx.com/runbooks/high-latency"
 
       # Database Connection Issues
       - alert: DatabaseConnectionFailure
@@ -31,11 +31,11 @@ groups:
         for: 1m
         labels:
           severity: critical
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "Database connection failure"
           description: "Database is not responding"
-          runbook_url: "https://docs.swaptrade.com/runbooks/database-failure"
+          runbook_url: "https://docs.peerx.com/runbooks/database-failure"
 
       # High Memory Usage
       - alert: HighMemoryUsage
@@ -43,11 +43,11 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "High memory usage"
           description: "Memory usage is {{ $value }}%"
-          runbook_url: "https://docs.swaptrade.com/runbooks/high-memory"
+          runbook_url: "https://docs.peerx.com/runbooks/high-memory"
 
       # High CPU Usage
       - alert: HighCpuUsage
@@ -55,11 +55,11 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "High CPU usage"
           description: "CPU usage is {{ $value }}%"
-          runbook_url: "https://docs.swaptrade.com/runbooks/high-cpu"
+          runbook_url: "https://docs.peerx.com/runbooks/high-cpu"
 
       # Queue Backlog Alert
       - alert: QueueBacklog
@@ -67,11 +67,11 @@ groups:
         for: 2m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "Queue backlog detected"
           description: "Queue {{ $labels.queue_name }} has {{ $value }} items"
-          runbook_url: "https://docs.swaptrade.com/runbooks/queue-backlog"
+          runbook_url: "https://docs.peerx.com/runbooks/queue-backlog"
 
       # Low Trading Volume Alert
       - alert: LowTradingVolume
@@ -79,23 +79,23 @@ groups:
         for: 10m
         labels:
           severity: info
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "Low trading volume"
           description: "Trading volume is {{ $value }} XLM in the last 10 minutes"
-          runbook_url: "https://docs.swaptrade.com/runbooks/low-volume"
+          runbook_url: "https://docs.peerx.com/runbooks/low-volume"
 
       # Service Unavailable
       - alert: ServiceUnavailable
-        expr: up{job="swaptrade-backend"} == 0
+        expr: up{job="peerx-backend"} == 0
         for: 1m
         labels:
           severity: critical
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "Service is unavailable"
-          description: "SwapTrade backend service is not responding"
-          runbook_url: "https://docs.swaptrade.com/runbooks/service-unavailable"
+          description: "PeerX backend service is not responding"
+          runbook_url: "https://docs.peerx.com/runbooks/service-unavailable"
 
       # SLO Violations
       - alert: SLOViolationLatency
@@ -103,33 +103,33 @@ groups:
         for: 1m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "SLO violation: API Latency"
           description: "API latency SLO is not being met"
-          runbook_url: "https://docs.swaptrade.com/runbooks/slo-violation"
+          runbook_url: "https://docs.peerx.com/runbooks/slo-violation"
 
       - alert: SLOViolationErrorRate
         expr: slo_error_rate_passed == 0
         for: 1m
         labels:
           severity: critical
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "SLO violation: Error Rate"
           description: "Error rate SLO is not being met"
-          runbook_url: "https://docs.swaptrade.com/runbooks/slo-violation"
+          runbook_url: "https://docs.peerx.com/runbooks/slo-violation"
 
       - alert: SLOViolationAvailability
         expr: slo_availability_passed == 0
         for: 1m
         labels:
           severity: critical
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "SLO violation: Availability"
           description: "Availability SLO is not being met"
-          runbook_url: "https://docs.swaptrade.com/runbooks/slo-violation"
+          runbook_url: "https://docs.peerx.com/runbooks/slo-violation"
 
       # Business Metrics Alerts
       - alert: ZeroActiveUsers
@@ -137,25 +137,25 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "No active users"
           description: "No active users detected for 5 minutes"
-          runbook_url: "https://docs.swaptrade.com/runbooks/no-users"
+          runbook_url: "https://docs.peerx.com/runbooks/no-users"
 
       - alert: FeeProgressionStuck
         expr: rate(fee_discounts_applied_total[1h]) == 0
         for: 2h
         labels:
           severity: info
-          service: swaptrade-backend
+          service: peerx-backend
         annotations:
           summary: "Fee progression system inactive"
           description: "No fee discounts applied in the last 2 hours"
-          runbook_url: "https://docs.swaptrade.com/runbooks/fee-progression"
+          runbook_url: "https://docs.peerx.com/runbooks/fee-progression"
 
   # ── Distributed Tracing Alerts (issue #401) ──────────────────────────────
-  - name: swaptrade-tracing.rules
+  - name: peerx-tracing.rules
     rules:
       # Slow trace alert — fires when P95 request latency exceeds 2 s
       - alert: SlowTraces
@@ -168,7 +168,7 @@ groups:
         for: 3m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
           team: engineering
         annotations:
           summary: "Slow traces detected"
@@ -176,7 +176,7 @@ groups:
             95th-percentile request latency for {{ $labels.method }}
             {{ $labels.route }} is {{ $value | humanizeDuration }},
             exceeding the 2 s threshold.
-          runbook_url: "https://docs.swaptrade.com/runbooks/slow-traces"
+          runbook_url: "https://docs.peerx.com/runbooks/slow-traces"
 
       # High trace error rate — fires when > 5 % of requests return 5xx
       - alert: TraceErrorRateHigh
@@ -191,14 +191,14 @@ groups:
         for: 2m
         labels:
           severity: critical
-          service: swaptrade-backend
+          service: peerx-backend
           team: engineering
         annotations:
           summary: "High trace error rate"
           description: >
             Error rate for {{ $labels.method }} {{ $labels.route }} is
             {{ $value | humanize }}%, which exceeds the 5 % SLO threshold.
-          runbook_url: "https://docs.swaptrade.com/runbooks/trace-errors"
+          runbook_url: "https://docs.peerx.com/runbooks/trace-errors"
 
       # Slow database queries — P95 DB query latency > 500 ms
       - alert: SlowDatabaseQueries
@@ -211,7 +211,7 @@ groups:
         for: 5m
         labels:
           severity: warning
-          service: swaptrade-backend
+          service: peerx-backend
           team: engineering
         annotations:
           summary: "Slow database queries"
@@ -219,7 +219,7 @@ groups:
             P95 database query latency for {{ $labels.operation }}
             {{ $labels.table }} is {{ $value | humanizeDuration }},
             exceeding 500 ms.
-          runbook_url: "https://docs.swaptrade.com/runbooks/slow-db-queries"
+          runbook_url: "https://docs.peerx.com/runbooks/slow-db-queries"
 
       # Trace collection overhead — alert if monitoring interceptor adds > 10 ms
       # (measured via custom histogram if instrumented separately)
@@ -233,11 +233,11 @@ groups:
         for: 10m
         labels:
           severity: info
-          service: swaptrade-backend
+          service: peerx-backend
           team: engineering
         annotations:
           summary: "Trace collection latency overhead detected"
           description: >
             The P99 request latency has increased by more than 10 ms compared
             to 10 minutes ago, which may indicate tracing overhead.
-          runbook_url: "https://docs.swaptrade.com/runbooks/trace-overhead"
+          runbook_url: "https://docs.peerx.com/runbooks/trace-overhead"
