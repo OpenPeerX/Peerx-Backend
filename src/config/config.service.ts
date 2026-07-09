@@ -75,11 +75,11 @@ export class ConfigService implements OnModuleInit {
         swagger: {
           title: this.nestConfigService.get<string>(
             'SWAGGER_TITLE',
-            'SwapTrade API',
+            'PeerX API',
           ),
           description: this.nestConfigService.get<string>(
             'SWAGGER_DESCRIPTION',
-            'API documentation for the SwapTrade application',
+            'API documentation for the PeerX application',
           ),
           version: this.nestConfigService.get<string>('SWAGGER_VERSION', '1.0'),
           path: this.nestConfigService.get<string>('SWAGGER_PATH', 'api'),
@@ -106,7 +106,7 @@ export class ConfigService implements OnModuleInit {
         port: this.nestConfigService.get<number>('DB_PORT'),
         username: this.nestConfigService.get<string>('DB_USERNAME'),
         password: this.nestConfigService.get<string>('DB_PASSWORD'),
-        database: this.nestConfigService.get<string>('DB_NAME', 'swaptrade.db'),
+        database: this.nestConfigService.get<string>('DB_NAME', 'peerx.db'),
         synchronize: this.nestConfigService.get<boolean>(
           'DB_SYNCHRONIZE',
           false,
