@@ -540,7 +540,7 @@ export class AuthService {
 
     if (dto.method === 'totp') {
       const secret = speakeasy.generateSecret({
-        name: `SwapTrade (${auth.email})`,
+        name: `PeerX (${auth.email})`,
         length: 20,
       });
       // Temporarily store secret (not enabled until verified)
