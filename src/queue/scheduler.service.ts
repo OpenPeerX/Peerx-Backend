@@ -110,7 +110,7 @@ export class SchedulerService implements OnModuleInit {
         startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         endDate: new Date(),
         format: 'pdf',
-        email: process.env.ADMIN_EMAIL || 'admin@swaptrade.com',
+        email: process.env.ADMIN_EMAIL || 'admin@peerx.com',
       });
 
       this.logger.log('Weekly cleanup jobs scheduled successfully');
@@ -324,7 +324,7 @@ export class SchedulerService implements OnModuleInit {
 
   private async getAdminEmails(): Promise<string[]> {
     // In production, fetch from database or config
-    return [process.env.ADMIN_EMAIL || 'admin@swaptrade.com'].filter(Boolean);
+    return [process.env.ADMIN_EMAIL || 'admin@peerx.com'].filter(Boolean);
   }
 
   // ==================== Manual Trigger Methods ====================
