@@ -212,7 +212,7 @@ export class AiTradingAssistantService {
 
     if (profile.totalTrades === 0) {
       return [
-        'Welcome to SwapTrade. Start by learning how orders, portfolio allocation, and risk warnings work before placing leveraged trades.',
+        'Welcome to PeerX. Start by learning how orders, portfolio allocation, and risk warnings work before placing leveraged trades.',
         'A good onboarding path is: review platform features, understand leverage and liquidation risk, then practice with small educational examples.',
         risk.guardrail,
       ].join(' ');
@@ -220,7 +220,7 @@ export class AiTradingAssistantService {
 
     if (intent === 'platform_features') {
       return [
-        'SwapTrade supports trading workflows such as order placement, portfolio tracking, risk checks, analytics, and real-time updates.',
+        'PeerX supports trading workflows such as order placement, portfolio tracking, risk checks, analytics, and real-time updates.',
         'This assistant can explain those features and highlight educational risk considerations based on your recent activity.',
         risk.guardrail,
       ].join(' ');
@@ -268,7 +268,7 @@ export class AiTradingAssistantService {
     if (
       normalized.includes('feature') ||
       normalized.includes('platform') ||
-      normalized.includes('how does swaptrade')
+      normalized.includes('how does peerx')
     ) {
       return 'platform_features';
     }
