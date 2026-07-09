@@ -17,9 +17,9 @@ export class VcIssuerService {
   private readonly logger = new Logger(VcIssuerService.name);
 
   // Simulated Master Issuer DID (Ideally verified externally)
-  private readonly issuerDid = 'did:ethr:0xSwapTradeKycIssuer000000';
+  private readonly issuerDid = 'did:ethr:0xPeerXKycIssuer000000';
   private readonly encryptionKey = crypto.scryptSync(
-    'SwapTradeMasterSuperSecret',
+    'PeerXMasterSuperSecret',
     'salt',
     32,
   );
