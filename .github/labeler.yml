@@ -1,0 +1,16 @@
+'rebrand':
+  - changed-files:
+      - any-glob-to-any-file: '**/*'
+'release-notes:minor':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'CHANGELOG.md'
+'release-notes:patch':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/**'
+'observability':
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'monitoring/**'
+          - 'src/common/monitoring/**'
