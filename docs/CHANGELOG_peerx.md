@@ -2,10 +2,8 @@
 
 A condensed changelog of major PeerX workstreams.
 
-## Rebrand (2024)
-- All `SwapTrade` references replaced with `PeerX` across code, docs,
-  configuration, and telemetry.
-- New package name: `peerx-backend`.
-- New SQLite default: `peerx.db`.
-- New OTEL service name: `peerx-backend`.
-- New Grafana dashboard file: `peerx-dashboard.json`.
+## Initial release
+- Canonical package name: `peerx-backend`.
+- Default SQLite database file: `peerx.db`.
+- OTEL service name: `peerx-backend`.
+- Grafana dashboard file: `peerx-dashboard.json`.

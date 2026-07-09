@@ -13,10 +13,7 @@ All participants are expected to follow the PeerX Code of Conduct.
 - YAML: 2-space indent; no tabs.
 
 ## Branding checks
-Before opening a pull request, run:
-
-```bash
-./scripts/check-branding.sh
-```
-
-to ensure no legacy SwapTrade references were introduced.
+Before opening a pull request, ensure that the canonical **PeerX**
+project name is used in code, configuration, and documentation you
+add or modify. Use `peerx-backend` for the npm package and Docker
+image, and `peerx.db` for the default SQLite database file.
