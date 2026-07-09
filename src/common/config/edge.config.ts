@@ -8,7 +8,7 @@ export default registerAs('edge', () => ({
     apiKey: process.env.CDN_API_KEY,
     zoneId: process.env.CDN_ZONE_ID,
     distributionId: process.env.CDN_DISTRIBUTION_ID,
-    baseUrl: process.env.CDN_BASE_URL || 'https://cdn.swaptrade.io',
+    baseUrl: process.env.CDN_BASE_URL || 'https://cdn.peerx.io',
     cacheControl: {
       static: 'public, max-age=31536000, immutable', // 1 year for static assets
       api: 'public, max-age=60, s-maxage=300', // 1 min browser, 5 min CDN for API
