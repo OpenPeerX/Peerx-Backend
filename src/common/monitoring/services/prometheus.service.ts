@@ -37,7 +37,7 @@ export class PrometheusService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     // Collect default Node.js metrics
     register.setDefaultLabels({
-      app: 'swaptrade-backend',
+      app: 'peerx-backend',
       version: process.env.APP_VERSION || '1.0.0',
       environment: process.env.NODE_ENV || 'development',
     });
