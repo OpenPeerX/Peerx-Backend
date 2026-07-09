@@ -54,7 +54,7 @@ export class TraceInterceptor implements NestInterceptor {
 
     const spanKind = this.resolveKind(options?.kind);
 
-    const tracer = trace.getTracer('swaptrade-backend');
+    const tracer = trace.getTracer('peerx-backend');
 
     return new Observable((subscriber) => {
       tracer.startActiveSpan(
