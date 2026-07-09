@@ -36,7 +36,7 @@ const defaultMonitoringConfig: MonitoringConfig = {
     samplingRate: parseFloat(process.env.OTEL_SAMPLING_RATE ?? '1.0'),
     exportInterval: parseInt(process.env.OTEL_EXPORT_INTERVAL ?? '5000', 10),
     headers: {},
-    serviceName: process.env.OTEL_SERVICE_NAME ?? 'swaptrade-backend',
+    serviceName: process.env.OTEL_SERVICE_NAME ?? 'peerx-backend',
     serviceVersion:
       process.env.OTEL_SERVICE_VERSION ?? process.env.APP_VERSION ?? '1.0.0',
     environment: process.env.NODE_ENV ?? 'development',
