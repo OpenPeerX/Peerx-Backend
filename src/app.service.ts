@@ -3,6 +3,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class AppService {
   getHello(): string {
-    return 'SwapTrade feature slice is running';
+    return 'PeerX feature slice is running';
   }
 }
