@@ -1,4 +1,4 @@
-# TODO - SwapTrade Backend (Analytics Module)
+# TODO - PeerX Backend (Analytics Module)
 
 ## Steps
 - [ ] Add unit tests for advanced-analytics services (price prediction, risk scoring, behavior analysis, export)
