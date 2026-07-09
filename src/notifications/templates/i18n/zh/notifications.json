@@ -6,7 +6,7 @@
     },
     "sms": {
       "subject": "交易已执行",
-      "body": "SwapTrade：您的{{amount}} {{asset}}交易已以${{price}}执行。总计：${{totalValue}}。"
+      "body": "PeerX：您的{{amount}} {{asset}}交易已以${{price}}执行。总计：${{totalValue}}。"
     },
     "push": {
       "subject": "交易已执行",
@@ -20,7 +20,7 @@
     },
     "sms": {
       "subject": "紧急：清算通知",
-      "body": "紧急SwapTrade：您的{{asset}}仓位已被清算。请立即查看您的账户。"
+      "body": "紧急PeerX：您的{{asset}}仓位已被清算。请立即查看您的账户。"
     },
     "push": {
       "subject": "⚠️ 仓位已清算",
@@ -34,7 +34,7 @@
     },
     "sms": {
       "subject": "充值已到账",
-      "body": "SwapTrade：已收到{{amount}} {{asset}}充值！交易号：{{txHash}}。资金现已可用。"
+      "body": "PeerX：已收到{{amount}} {{asset}}充值！交易号：{{txHash}}。资金现已可用。"
     },
     "push": {
       "subject": "充值已到账",
@@ -48,7 +48,7 @@
     },
     "sms": {
       "subject": "提现完成",
-      "body": "SwapTrade：{{amount}} {{asset}}提现已处理。交易号：{{txHash}}"
+      "body": "PeerX：{{amount}} {{asset}}提现已处理。交易号：{{txHash}}"
     },
     "push": {
       "subject": "提现已处理",
@@ -62,7 +62,7 @@
     },
     "sms": {
       "subject": "安全提醒",
-      "body": "SwapTrade安全警告：从{{ipAddress}}检测到新登录。如果不是您，请立即重置密码。"
+      "body": "PeerX安全警告：从{{ipAddress}}检测到新登录。如果不是您，请立即重置密码。"
     },
     "push": {
       "subject": "⚠️ 安全提醒",
