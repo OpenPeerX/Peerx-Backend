@@ -2,13 +2,13 @@
 
 ## Overview
 
-The SwapTrade WebSocket API provides real-time updates for trading activities, market data, and user-specific events. The API uses Socket.IO for reliable WebSocket communication with fallback to long polling.
+The PeerX WebSocket API provides real-time updates for trading activities, market data, and user-specific events. The API uses Socket.IO for reliable WebSocket communication with fallback to long polling.
 
 ## Connection
 
 ### Base URL
 ```
-Production: wss://api.swaptrade.com
+Production: wss://api.peerx.com
 Development: ws://localhost:3000
 ```
 
