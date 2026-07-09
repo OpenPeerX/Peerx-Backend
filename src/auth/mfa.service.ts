@@ -22,7 +22,7 @@ export class MFAService {
     if (!auth) throw new NotFoundException('Auth record not found');
 
     const secret = speakeasy.generateSecret({
-      name: `SwapTrade (${auth.email})`,
+      name: `PeerX (${auth.email})`,
       length: 20,
     });
 
