@@ -39,7 +39,7 @@ export class TypeOrmTracingSubscriber implements EntitySubscriberInterface {
   }): void {
     if (!event.queryRunner) return;
 
-    const tracer = trace.getTracer('swaptrade-backend');
+    const tracer = trace.getTracer('peerx-backend');
     const operation = this.extractOperation(event.query);
     const table = this.extractTable(event.query);
     const spanName = table ? `${operation} ${table}` : operation;
