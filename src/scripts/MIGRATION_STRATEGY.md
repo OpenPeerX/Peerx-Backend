@@ -1,7 +1,7 @@
 # Production Database Migration Strategy
 
 ## Overview
-This document outlines the strategy for managing database schema changes in the SwapTrade backend. Our goal is to ensure **zero-downtime deployments**, **data integrity**, and **safe rollbacks**.
+This document outlines the strategy for managing database schema changes in the PeerX backend. Our goal is to ensure **zero-downtime deployments**, **data integrity**, and **safe rollbacks**.
 
 ## Core Principles
 1.  **Non-Destructive Changes**: Never drop columns or tables that are currently in use.
@@ -105,4 +105,4 @@ In case of catastrophic corruption:
 2.  Replay missing transactions if Point-in-Time Recovery (PITR) is enabled.
 
 ---
-*Generated for SwapTrade Backend*
+*Generated for PeerX Backend*
