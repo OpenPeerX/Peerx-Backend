@@ -53,7 +53,7 @@ if (!OTEL_ENABLED) {
     diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN);
   }
 
-  const serviceName = process.env.OTEL_SERVICE_NAME || 'swaptrade-backend';
+  const serviceName = process.env.OTEL_SERVICE_NAME || 'peerx-backend';
   const serviceVersion =
     process.env.OTEL_SERVICE_VERSION || process.env.APP_VERSION || '1.0.0';
   const deploymentEnv = process.env.NODE_ENV || 'development';
@@ -185,5 +185,5 @@ if (!OTEL_ENABLED) {
 
   // Expose the configured tracer globally so other modules can reference it
   // without re-importing the SDK (avoids double-init issues)
-  (global as any).__swaptrade_tracer = trace.getTracer(serviceName);
+  (global as any).__peerx_tracer = trace.getTracer(serviceName);
 }
