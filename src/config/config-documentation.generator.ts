@@ -103,7 +103,7 @@ export class ConfigDocumentationGenerator {
             {
               name: 'DB_NAME',
               value: this.configService.database.database,
-              default: 'swaptrade.db',
+              default: 'peerx.db',
               description: 'Database name',
               required: true,
               sensitive: false,
