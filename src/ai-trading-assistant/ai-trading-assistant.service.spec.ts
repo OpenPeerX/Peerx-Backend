@@ -17,7 +17,7 @@ describe('AiTradingAssistantService', () => {
     });
 
     expect(response.profile.experienceLevel).toBe('NEW');
-    expect(response.answer).toContain('Welcome to SwapTrade');
+    expect(response.answer).toContain('Welcome to PeerX');
     expect(response.educationalContent).toContain(
       'Review order types, balances, and risk warnings before increasing trade size.',
     );
@@ -39,7 +39,7 @@ describe('AiTradingAssistantService', () => {
       portfolio: [{ asset: 'BTC', allocationPercent: 20 }],
     });
 
-    expect(response.answer).toContain('SwapTrade supports trading workflows');
+    expect(response.answer).toContain('PeerX supports trading workflows');
     expect(response.answer).toContain(
       'does not provide personalized financial advice',
     );
