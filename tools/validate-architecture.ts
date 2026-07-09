@@ -49,7 +49,7 @@ function runCheck(name: string, command: string): CheckResult {
 
 function main() {
   log(BLUE, '\n╔════════════════════════════════════════╗');
-  log(BLUE, '║  SwapTrade Architecture Validation     ║');
+  log(BLUE, '║  PeerX Architecture Validation     ║');
   log(BLUE, '╚════════════════════════════════════════╝');
 
   // Check 1: ESLint
