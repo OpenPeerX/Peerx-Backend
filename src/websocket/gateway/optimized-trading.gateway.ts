@@ -80,7 +80,7 @@ export class OptimizedTradingGateway
 
     // Send welcome message
     client.emit('connected', {
-      message: 'Connected to SwapTrade WebSocket',
+      message: 'Connected to PeerX WebSocket',
       timestamp: new Date().toISOString(),
       connectionId: client.id,
     });
