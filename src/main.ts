@@ -23,7 +23,7 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('SwapTrade Backend')
+    .setTitle('PeerX Backend')
     .setDescription('Identity & Infrastructure domain services')
     .setVersion('2.0')
     .addTag('identity')
