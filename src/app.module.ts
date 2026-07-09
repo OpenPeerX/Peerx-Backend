@@ -136,7 +136,7 @@ import { CopySubscription } from './social-trading/entities/copy-subscription.en
         port: configService.get<number>('DB_PORT', 5432),
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', ''),
-        database: configService.get<string>('DB_NAME', 'swaptrade'),
+        database: configService.get<string>('DB_NAME', 'peerx'),
         entities: [
           // Identity — Auth
           Auth,
