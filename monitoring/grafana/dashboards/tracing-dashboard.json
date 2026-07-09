@@ -1,8 +1,8 @@
 {
   "id": null,
-  "uid": "swaptrade-tracing",
-  "title": "SwapTrade — Distributed Tracing",
-  "tags": ["swaptrade", "tracing", "opentelemetry"],
+  "uid": "peerx-tracing",
+  "title": "PeerX — Distributed Tracing",
+  "tags": ["peerx", "tracing", "opentelemetry"],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
