@@ -275,6 +275,14 @@ sudo apt-get install redis-server
 redis-server
 ```
 
+> **Zero-loss messaging**: the queue's zero-loss message service persists
+> message state (payloads, attempts, processing leases, replication targets)
+> in Redis under the `zls:*` key namespace. All state survives process
+> restarts and is shared across horizontally scaled instances. A background
+> recovery sweep re-queues messages whose processing lease expired (worker
+> crash) exactly once, so Redis must be reachable for zero-loss guarantees
+> to hold.
+
 ### 4. Database Setup
 
 #### Development (SQLite)
