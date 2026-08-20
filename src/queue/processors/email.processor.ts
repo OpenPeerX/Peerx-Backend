@@ -11,8 +11,12 @@ import { ConfigService } from '@nestjs/config';
 import type { Job } from 'bull';
 import * as nodemailer from 'nodemailer';
 import { QueueName } from '../queue.constants';
-import { EmailJobData } from '../queue.service';
-import { RedisPoolService } from '../../common/cache/redis-pool.service';
+import { EmailJobData } from '../queue.service';import {
+  DeadLetterQueueService,
+  DLQReason,
+  isPermanentFailure,
+} from '../dead-letter-queue.service';
+  import { RedisPoolService } from '../../common/cache/redis-pool.service';
 import { renderEmailTemplate } from '../../notifications/templates/email.templates';
 
 /**
@@ -61,6 +65,9 @@ const sentKey = (emailId: string) => `email:sent:${emailId}`;
  * the claim and skips; a failure releases the claim so the retry actually
  * re-sends. The claim is released on failure, so exactly the jobs that
  * genuinely failed are retried.
+ *
+ * Jobs that exhaust Bull's retry budget (permanent failure) are recorded in
+ * the durable dead-letter queue for operator recovery.
  */
 @Processor(QueueName.EMAILS)
 export class EmailJobProcessor {
@@ -71,6 +78,7 @@ export class EmailJobProcessor {
   constructor(
     private readonly configService: ConfigService,
     private readonly redis: RedisPoolService,
+    private readonly dlqService: DeadLetterQueueService,
   ) {
     const smtp = this.readSmtpConfig();
     this.transporter = this.createTransport(smtp);
@@ -150,11 +158,17 @@ export class EmailJobProcessor {
       error.stack,
     );
 
-    if (job.attemptsMade >= attempts) {
+    if (isPermanentFailure(job)) {
       this.logger.error(
         `Email job ${job.id} permanently failed. Subject: ${job.data.subject}`,
       );
       this.notifyAdminOfFailure(job, error);
+      void this.dlqService.addToDLQ(
+        job,
+        error,
+        DLQReason.MAX_RETRIES_EXCEEDED,
+        QueueName.EMAILS,
+      );
     }
   }
 

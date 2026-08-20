@@ -108,6 +108,7 @@ describe('EmailJobProcessor', () => {
     return new EmailJobProcessor(
       configService as unknown as ConfigService,
       redis.useValue as unknown as RedisPoolService,
+      { addToDLQ: jest.fn().mockResolvedValue(undefined) } as never,
     );
   }
 

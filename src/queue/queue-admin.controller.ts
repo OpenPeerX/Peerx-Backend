@@ -75,7 +75,7 @@ export class QueueAdminController {
   })
   async getDashboardSummary() {
     const summary = await this.queueService.getDashboardSummary();
-    const dlqStats = this.dlqService.getDLQStats();
+    const dlqStats = await this.dlqService.getDLQStats();
 
     return {
       timestamp: new Date(),
@@ -316,7 +316,7 @@ export class QueueAdminController {
     @Param('queueName') queueName: QueueName,
     @Param('jobId') jobId: string,
   ) {
-    const removed = this.dlqService.removeDLQItem(queueName, jobId);
+    const removed = await this.dlqService.removeDLQItem(queueName, jobId);
 
     return {
       removed,
@@ -335,7 +335,7 @@ export class QueueAdminController {
   })
   @HttpCode(HttpStatus.OK)
   async clearDLQ(@Param('queueName') queueName: QueueName) {
-    const count = this.dlqService.clearDLQ(queueName);
+    const count = await this.dlqService.clearDLQ(queueName);
 
     return {
       message: 'DLQ cleared',
@@ -581,7 +581,7 @@ export class QueueAdminController {
   async getDiagnostics() {
     const metrics = await this.queueService.getAllQueueMetrics();
     const health = await this.getSystemHealth();
-    const dlqStats = this.dlqService.getDLQStats();
+    const dlqStats = await this.dlqService.getDLQStats();
 
     return {
       timestamp: new Date(),
