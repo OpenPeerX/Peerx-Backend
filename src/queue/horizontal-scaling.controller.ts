@@ -310,7 +310,7 @@ export class HorizontalScalingController {
   @Get('zero-loss/stats')
   @ApiOperation({ summary: 'Get zero-loss message statistics' })
   @ApiResponse({ status: 200, description: 'Zero-loss stats' })
-  getZeroLossStats() {
+  async getZeroLossStats() {
     return this.zeroLoss.getStats();
   }
 
@@ -318,8 +318,8 @@ export class HorizontalScalingController {
   @ApiOperation({ summary: 'Get message by ID' })
   @ApiResponse({ status: 200, description: 'Message details' })
   @ApiResponse({ status: 404, description: 'Message not found' })
-  getMessage(@Param('messageId') messageId: string) {
-    const message = this.zeroLoss.getMessage(messageId);
+  async getMessage(@Param('messageId') messageId: string) {
+    const message = await this.zeroLoss.getMessage(messageId);
     if (!message) {
       return { error: 'Message not found' };
     }
@@ -329,24 +329,24 @@ export class HorizontalScalingController {
   @Get('zero-loss/messages/queue/:queueName')
   @ApiOperation({ summary: 'Get messages for a queue' })
   @ApiResponse({ status: 200, description: 'Queue messages' })
-  getQueueMessages(@Param('queueName') queueName: string) {
+  async getQueueMessages(@Param('queueName') queueName: string) {
     return {
-      messages: this.zeroLoss.getQueueMessages(queueName),
+      messages: await this.zeroLoss.getQueueMessages(queueName),
     };
   }
 
   @Post('zero-loss/messages/:messageId/retry')
   @ApiOperation({ summary: 'Retry a failed message' })
   @ApiResponse({ status: 200, description: 'Retry initiated' })
-  retryMessage(@Param('messageId') messageId: string) {
-    const success = this.zeroLoss.retryMessage(messageId);
+  async retryMessage(@Param('messageId') messageId: string) {
+    const success = await this.zeroLoss.retryMessage(messageId);
     return { success };
   }
 
   @Get('zero-loss/messages/:messageId/verify')
   @ApiOperation({ summary: 'Verify message integrity' })
   @ApiResponse({ status: 200, description: 'Integrity check result' })
-  verifyMessageIntegrity(@Param('messageId') messageId: string) {
+  async verifyMessageIntegrity(@Param('messageId') messageId: string) {
     return this.zeroLoss.verifyMessageIntegrity(messageId);
   }
 
