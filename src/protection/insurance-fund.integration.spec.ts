@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InsuranceFundService } from './services/insurance-fund.service';
 import { FundHealthService } from './services/fund-health.service';
@@ -12,122 +13,80 @@ import { LiquidationEvent } from './entities/liquidation-event.entity';
 import { FundTier } from './enums/fund-tier.enum';
 import { FundHealthStatus } from './enums/fund-health-status.enum';
 import { InsuranceTxType } from './enums/insurance-tx-type.enum';
+import {
+  InsurancePayoutEvent,
+  LiquidationShortfallEvent,
+} from '../infrastructure/events/domain.events';
 
 /**
- * Integration test: initialize funds → fee contribution → cover shortfall →
- * health monitoring → replenish → audit trail
+ * Integration test against a real in-memory SQLite DataSource.
+ *
+ * The services run on real repositories and real transactions, so the
+ * concurrency guarantees exercised here (atomic conditional payouts, exactly
+ * one success under a double-spend attempt, transactional multi-tier
+ * coverage) are the same code paths that run against Postgres in production.
  */
 describe('Insurance Fund Integration', () => {
+  let dataSource: DataSource;
   let insuranceFundService: InsuranceFundService;
   let fundHealthService: FundHealthService;
   let liquidationProtection: LiquidationProtectionService;
   let feeContribution: InsuranceFeeContributionService;
+  let eventEmitter: { emit: jest.Mock };
 
-  const tiers: Record<string, unknown>[] = [];
-  const funds: Record<string, unknown>[] = [];
-  const transactions: Record<string, unknown>[] = [];
-  const liquidations: Record<string, unknown>[] = [];
-  let tierIdCounter = 1;
-  let fundIdCounter = 1;
-
-  beforeEach(async () => {
-    tiers.length = 0;
-    funds.length = 0;
-    transactions.length = 0;
-    liquidations.length = 0;
-    tierIdCounter = 1;
-    fundIdCounter = 1;
-
-    const tierRepo = {
-      findOne: jest.fn(
-        async ({ where }) => tiers.find((t) => t.tier === where.tier) ?? null,
-      ),
-      find: jest.fn(async () => tiers),
-      create: jest.fn((d) => d),
-      save: jest.fn(async (d) => {
-        const tier = { ...d, id: tierIdCounter++ };
-        tiers.push(tier);
-        return tier;
-      }),
-    };
-
-    const fundRepo = {
-      findOne: jest.fn(async (opts) => {
-        const where = opts?.where ?? {};
-        if (where.id) return funds.find((f) => f.id === where.id) ?? null;
-        if (where.tierId && where.asset) {
-          return (
-            funds.find(
-              (f) => f.tierId === where.tierId && f.asset === where.asset,
-            ) ?? null
-          );
-        }
-        return null;
-      }),
-      find: jest.fn(async () =>
-        funds.map((f) => ({
-          ...f,
-          tier: tiers.find((t) => t.id === f.tierId),
-        })),
-      ),
-      create: jest.fn((d) => d),
-      save: jest.fn(async (d) => {
-        const idx = funds.findIndex((f) => f.id === d.id);
-        if (idx >= 0) {
-          funds[idx] = { ...funds[idx], ...d };
-          return funds[idx];
-        }
-        const fund = { ...d, id: fundIdCounter++ };
-        funds.push(fund);
-        return fund;
-      }),
-    };
-
-    const txRepo = {
-      find: jest.fn(async () => transactions),
-      create: jest.fn((d) => d),
-      save: jest.fn(async (d) => {
-        const tx = { ...d, id: `tx-${transactions.length + 1}` };
-        transactions.push(tx);
-        return tx;
-      }),
-    };
-
-    const liquidationRepo = {
-      create: jest.fn((d) => d),
-      save: jest.fn(async (d) => {
-        const ev = { ...d, id: `liq-${liquidations.length + 1}` };
-        liquidations.push(ev);
-        return ev;
-      }),
-    };
-
-    const eventEmitter = { emit: jest.fn() };
-
+  beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [
+        TypeOrmModule.forRoot({
+          type: 'sqlite',
+          database: ':memory:',
+          entities: [
+            InsuranceFund,
+            InsuranceFundTier,
+            InsuranceTransaction,
+            LiquidationEvent,
+          ],
+          synchronize: true,
+          dropSchema: true,
+        }),
+        TypeOrmModule.forFeature([
+          InsuranceFund,
+          InsuranceFundTier,
+          InsuranceTransaction,
+          LiquidationEvent,
+        ]),
+      ],
       providers: [
         InsuranceFundService,
         FundHealthService,
         LiquidationProtectionService,
         InsuranceFeeContributionService,
-        { provide: getRepositoryToken(InsuranceFund), useValue: fundRepo },
-        { provide: getRepositoryToken(InsuranceFundTier), useValue: tierRepo },
-        {
-          provide: getRepositoryToken(InsuranceTransaction),
-          useValue: txRepo,
-        },
-        {
-          provide: getRepositoryToken(LiquidationEvent),
-          useValue: liquidationRepo,
-        },
-        { provide: EventEmitter2, useValue: eventEmitter },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
+    dataSource = module.get(DataSource);
     insuranceFundService = module.get(InsuranceFundService);
     fundHealthService = module.get(FundHealthService);
     liquidationProtection = module.get(LiquidationProtectionService);
     feeContribution = module.get(InsuranceFeeContributionService);
+    eventEmitter = module.get(EventEmitter2);
+  });
+
+  beforeEach(async () => {
+    for (const entity of [
+      LiquidationEvent,
+      InsuranceTransaction,
+      InsuranceFund,
+      InsuranceFundTier,
+    ]) {
+      await dataSource.getRepository(entity).clear();
+    }
+    eventEmitter.emit.mockClear();
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
   });
 
   it('should complete full insurance fund lifecycle', async () => {
@@ -181,19 +140,78 @@ describe('Insurance Fund Integration', () => {
       'USDT',
     );
 
-    const fund = funds.find((f) => f.id === mediumFund.id)!;
-    fund.balance = 10000;
-    fund.targetReserve = 100000;
-    fund.healthPercent = 50;
-    fund.healthStatus = FundHealthStatus.HEALTHY;
+    const fundRepo = dataSource.getRepository(InsuranceFund);
+    await fundRepo.update(mediumFund.id, {
+      balance: 10000,
+      targetReserve: 100000,
+      healthPercent: 50,
+      healthStatus: FundHealthStatus.HEALTHY,
+    });
 
     await fundHealthService.updateFundHealth(mediumFund.id);
 
-    const updated = funds.find((f) => f.id === mediumFund.id)!;
-    expect(Number(updated.healthPercent)).toBe(10);
-    expect(updated.healthStatus).toBe(FundHealthStatus.CRITICAL);
+    const updated = await fundRepo.findOne({ where: { id: mediumFund.id } });
+    expect(Number(updated!.healthPercent)).toBe(10);
+    expect(updated!.healthStatus).toBe(FundHealthStatus.CRITICAL);
 
     const alerts = await fundHealthService.getActiveAlerts();
     expect(alerts.some((a) => a.isBelowThreshold)).toBe(true);
+  });
+
+  it('should report partial coverage explicitly when funds run out', async () => {
+    await insuranceFundService.initializeFunds('USDT');
+    const fundRepo = dataSource.getRepository(InsuranceFund);
+
+    const balances: Record<FundTier, number> = {
+      [FundTier.LOW]: 3000,
+      [FundTier.MEDIUM]: 1000,
+      [FundTier.HIGH]: 0,
+      [FundTier.CRITICAL]: 0,
+    };
+    for (const [tier, balance] of Object.entries(balances)) {
+      const fund = await insuranceFundService.getFundsByTier(
+        tier as FundTier,
+        'USDT',
+      );
+      await fundRepo.update(fund.id, { balance });
+    }
+
+    const result = await liquidationProtection.coverShortfall(99, 10000);
+
+    expect(result.coveredAmount).toBe(4000);
+    expect(result.remainingShortfall).toBe(6000);
+    expect(result.cascadePrevented).toBe(false);
+    expect(result.fundsUsed).toHaveLength(2);
+    expect(result.liquidationEvent.status).toBe('PARTIAL');
+
+    const persisted = await dataSource
+      .getRepository(LiquidationEvent)
+      .findOne({ where: { id: result.liquidationEvent.id } });
+    expect(persisted!.status).toBe('PARTIAL');
+    expect(Number(persisted!.coveredAmount)).toBe(4000);
+    expect(persisted!.cascadePrevented).toBe(false);
+
+    const shortfallEvent = eventEmitter.emit.mock.calls.find(
+      ([name]) => name === 'liquidation.shortfall',
+    );
+    expect(shortfallEvent).toBeDefined();
+    expect(shortfallEvent![1]).toBeInstanceOf(LiquidationShortfallEvent);
+    expect(
+      (shortfallEvent![1] as LiquidationShortfallEvent).cascadePrevented,
+    ).toBe(false);
+    expect(
+      (shortfallEvent![1] as LiquidationShortfallEvent).coveredAmount,
+    ).toBe(4000);
+
+    const payoutEvent = eventEmitter.emit.mock.calls.find(
+      ([name]) => name === 'insurance.payout',
+    );
+    expect(payoutEvent).toBeDefined();
+    expect(payoutEvent![1]).toBeInstanceOf(InsurancePayoutEvent);
+
+    const funds = await fundRepo.find();
+    const fundById = new Map(funds.map((f) => [f.id, f]));
+    expect(Number(fundById.get(result.fundsUsed[0].fundId)!.balance)).toBe(0);
+    expect(Number(fundById.get(result.fundsUsed[1].fundId)!.balance)).toBe(0);
   });
 });

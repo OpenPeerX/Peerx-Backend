@@ -38,13 +38,15 @@ describe('processor → DLQ wiring', () => {
     addToDLQ.mockResolvedValue({});
   });
 
-  it('email processor routes a permanently failed job to the DLQ', async () => {
+  it('email processor routes a permanently failed job to the DLQ', () => {
     const processor = new EmailJobProcessor(
+      { get: () => undefined } as never,
+      { withClient: () => Promise.resolve('OK') } as never,
       dlq.useValue as unknown as DeadLetterQueueService,
     );
     const job = makeJob({ to: 'a@b.c', subject: 'x' }, 3, 3);
 
-    await processor.onFailed(job, new Error('SMTP timeout'));
+    processor.onFailed(job, new Error('SMTP timeout'));
 
     expect(addToDLQ).toHaveBeenCalledWith(
       job,
@@ -54,13 +56,15 @@ describe('processor → DLQ wiring', () => {
     );
   });
 
-  it('email processor does not DLQ a retryable failure', async () => {
+  it('email processor does not DLQ a retryable failure', () => {
     const processor = new EmailJobProcessor(
+      { get: () => undefined } as never,
+      { withClient: () => Promise.resolve('OK') } as never,
       dlq.useValue as unknown as DeadLetterQueueService,
     );
     const job = makeJob({ to: 'a@b.c', subject: 'x' }, 1, 3);
 
-    await processor.onFailed(job, new Error('transient'));
+    processor.onFailed(job, new Error('transient'));
 
     expect(addToDLQ).not.toHaveBeenCalled();
   });
