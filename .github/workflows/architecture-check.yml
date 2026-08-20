@@ -1,5 +1,12 @@
 name: Architecture Validation
 
+# Fork PRs run with a read-only GITHUB_TOKEN by default; the PR-comment
+# step needs write access to post the architecture report.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 on:
   push:
     branches:
@@ -130,6 +137,9 @@ jobs:
 
       - name: Comment on PR with results
         if: github.event_name == 'pull_request' && always()
+        # Fork PRs run with a read-only GITHUB_TOKEN that cannot write
+        # comments, so a skipped report comment must not fail the check.
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
