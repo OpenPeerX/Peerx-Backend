@@ -357,11 +357,13 @@ TWILIO_ACCOUNT_SID=your_sid
 TWILIO_AUTH_TOKEN=your_token
 TWILIO_PHONE_NUMBER=+1234567890
 
-# Email
+# Email (SMTP)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
+SMTP_SECURE=false
 SMTP_USER=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
+EMAIL_FROM=notifications@peerx.com
 
 # GraphQL
 GRAPHQL_PLAYGROUND=true
@@ -371,6 +373,19 @@ GRAPHQL_INTROSPECTION=true
 CACHE_TTL=300
 CACHE_ENABLED=true
 ```
+
+**Email template resolution**: the email job processor renders the `template`
+field of an email job from the registry in
+`src/notifications/templates/email.templates.ts`. Supported template names are
+`welcome`, `trade-completed`, and `test`; placeholders use `{{key}}` syntax
+(the same convention as the i18n templates) and are HTML-escaped. Unknown
+template names fall back to a generic template instead of failing the job.
+
+**Idempotent email delivery**: each email is sent at most once, guarded by an
+atomic Redis `SET ... NX EX` marker keyed by `emailId` (recipients + subject +
+template). A Bull retry or a duplicate enqueue of an already-sent email is
+skipped; only genuinely failed sends (where the SMTP transport threw) release
+the marker and are re-sent by the queue's backoff.
 
 ### Optional Variables
 
