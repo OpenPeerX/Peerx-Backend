@@ -21,6 +21,10 @@ export interface SingleSwapJobData extends SwapJobData {
   fromAsset: string;
   toAsset: string;
   amount: number;
+  /** AMM pool to execute against (required by the swap processor). */
+  poolId?: number;
+  /** Minimum output for the swap, enforced by the AMM service. */
+  minAmountOut?: number;
 }
 
 export interface MultiLegSwapJobData extends SwapJobData {
@@ -28,7 +32,15 @@ export interface MultiLegSwapJobData extends SwapJobData {
   userId: string;
   type: 'multi_leg';
   batchId?: string;
-  legs: Array<{ fromAsset: string; toAsset: string; amount: number }>;
+  legs: Array<{
+    fromAsset: string;
+    toAsset: string;
+    amount: number;
+    /** AMM pool for this leg (required by the swap processor). */
+    poolId?: number;
+    /** Minimum output for this leg, enforced by the AMM service. */
+    minAmountOut?: number;
+  }>;
   data: Record<string, any>;
 }
 
