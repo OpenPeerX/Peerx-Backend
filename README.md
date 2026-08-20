@@ -79,6 +79,11 @@ To provide a secure, efficient, and user-centric trading experience with built-i
 - USDC stablecoin integration
 - On-chain settlement verification
 - Ethereum compatibility (ERC-20 tokens)
+- Cross-chain bridge with signer-bound multisig approvals: each bridge
+  transfer requires `BRIDGE_MULTISIG_THRESHOLD` distinct authorized signers
+  (configured via `BRIDGE_SIGNER_IDS`), each signer can approve a bridge at
+  most once, and approvals are recorded per signer in `bridge_approvals`
+  with a unique `(bridgeId, signerId)` constraint
 
 ### 📧 **Communication**
 - Email notifications via Nodemailer
@@ -333,6 +338,10 @@ JWT_REFRESH_EXPIRATION=604800
 STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
 STELLAR_USDC_ISSUER=GBDT5...
 STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
+
+# Cross-chain bridge multisig
+BRIDGE_MULTISIG_THRESHOLD=2        # distinct signers required to execute a bridge
+BRIDGE_SIGNER_IDS=                 # comma-separated user ids authorized to approve (empty = approvals disabled)
 
 # External Services
 EXCHANGE_RATE_URL=https://api.exchangerate-api.com/v4/latest
