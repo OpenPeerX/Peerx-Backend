@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
-    "@apollo/subgraph": "^2.9.0",
+    "@apollo/subgraph": "^2.14.3",
     "@nestjs-modules/ioredis": "^2.2.1",
     "@nestjs/apollo": "^13.4.2",
     "@nestjs/axios": "^4.0.1",
