@@ -33,9 +33,15 @@ export class CrossChainBridgeController {
   }
 
   @Post(':id/approve')
-  @ApiOperation({ summary: 'Add a multi-sig approval to a bridge operation' })
-  async approveBridge(@Param('id') id: string) {
-    return this.bridgeService.addApproval(id);
+  @ApiOperation({
+    summary: 'Add a multi-sig approval to a bridge operation',
+    description:
+      'Records an approval from the authenticated signer. Each signer may ' +
+      'approve a bridge at most once; the transfer executes only after the ' +
+      'multisig threshold of distinct authorized signers is reached.',
+  })
+  async approveBridge(@Param('id') id: string, @Request() req) {
+    return this.bridgeService.addApproval(id, req.user.userId);
   }
 
   @Get('health')
