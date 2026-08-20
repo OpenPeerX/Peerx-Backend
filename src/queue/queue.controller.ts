@@ -14,22 +14,23 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RbacGuard } from '../identity/roles/guards/rbac.guard';
+import { Roles } from '../identity/roles/decorators/roles.decorator';
+import { UserRole } from '../identity/roles/enums/user-role.enum';
 import { QueueService } from './queue.service';
 import { QueueMonitoringService } from './queue-monitoring.service';
 import { SchedulerService } from './scheduler.service';
 import { QueueName } from './queue.constants';
 
-// Uncomment if you have auth guards
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// import { RolesGuard } from '../auth/guards/roles.guard';
-// import { Roles } from '../auth/decorators/roles.decorator';
-
 @ApiTags('queue')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+@UseGuards(JwtAuthGuard)
 @Controller('api/queue')
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles('admin')
 export class QueueController {
   constructor(
     private readonly queueService: QueueService,
@@ -106,9 +107,12 @@ export class QueueController {
   }
 
   @Post('jobs/:queueName/:jobId/retry')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({
     summary: 'Retry a failed job',
-    description: 'Retries a failed job in the queue. Requires authentication.',
+    description: 'Retries a failed job in the queue. Requires ADMIN role.',
   })
   @ApiResponse({
     status: 200,
@@ -124,6 +128,9 @@ export class QueueController {
   }
 
   @Delete('jobs/:queueName/:jobId')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Remove a job' })
   @ApiResponse({ status: 200, description: 'Job removed' })
   async removeJob(
@@ -152,6 +159,9 @@ export class QueueController {
   // ==================== Queue Control ====================
 
   @Post('pause/:queueName')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Pause a queue' })
   @ApiResponse({ status: 200, description: 'Queue paused' })
   async pauseQueue(@Param('queueName') queueName: QueueName) {
@@ -160,6 +170,9 @@ export class QueueController {
   }
 
   @Post('resume/:queueName')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Resume a paused queue' })
   @ApiResponse({ status: 200, description: 'Queue resumed' })
   async resumeQueue(@Param('queueName') queueName: QueueName) {
@@ -168,6 +181,9 @@ export class QueueController {
   }
 
   @Delete('empty/:queueName')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Empty a queue (remove all jobs)' })
   @ApiResponse({ status: 200, description: 'Queue emptied' })
   async emptyQueue(@Param('queueName') queueName: QueueName) {
@@ -178,6 +194,9 @@ export class QueueController {
   // ==================== Manual Job Triggers ====================
 
   @Post('trigger/daily-report')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Manually trigger daily report generation' })
   @ApiResponse({ status: 200, description: 'Daily report triggered' })
   async triggerDailyReport(@Body('email') email?: string) {
@@ -186,6 +205,9 @@ export class QueueController {
   }
 
   @Post('trigger/weekly-cleanup')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Manually trigger weekly cleanup' })
   @ApiResponse({ status: 200, description: 'Weekly cleanup triggered' })
   async triggerWeeklyCleanup() {
@@ -194,6 +216,9 @@ export class QueueController {
   }
 
   @Post('trigger/custom-report')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Trigger custom report generation' })
   @ApiResponse({ status: 200, description: 'Custom report triggered' })
   async triggerCustomReport(
@@ -217,6 +242,9 @@ export class QueueController {
   // ==================== Test Endpoints ====================
 
   @Post('test/notification')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Test notification job' })
   @ApiResponse({ status: 200, description: 'Test notification queued' })
   async testNotification(@Body() body: { userId: string; message: string }) {
@@ -236,6 +264,9 @@ export class QueueController {
   }
 
   @Post('test/email')
+  @UseGuards(RbacGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiForbiddenResponse({ description: 'Requires ADMIN role' })
   @ApiOperation({ summary: 'Test email job' })
   @ApiResponse({ status: 200, description: 'Test email queued' })
   async testEmail(@Body() body: { to: string; subject: string }) {
@@ -253,6 +284,3 @@ export class QueueController {
     };
   }
 }
-
-// Update queue.module.ts to export the controller
-// Add QueueController to the controllers array in QueueModule

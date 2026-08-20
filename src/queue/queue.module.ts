@@ -17,6 +17,8 @@ import { QueueAnalyticsService } from './queue-analytics.service';
 import { QueueController } from './queue.controller';
 import { QueueAdminController } from './queue-admin.controller';
 import { UserModule } from '../user/user.module';
+import { AuthModule } from '../auth/auth.module';
+import { RolesModule } from '../identity/roles/roles.module';
 import { CustomCacheModule } from '../common/cache/cache.module';
 import { QueueName } from './queue.constants';
 
@@ -114,6 +116,8 @@ import { QueueName } from './queue.constants';
 
     CustomCacheModule,
     UserModule,
+    AuthModule,
+    RolesModule,
   ],
   controllers: [QueueController, QueueAdminController, SchedulerController],
   providers: [

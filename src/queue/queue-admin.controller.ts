@@ -10,13 +10,20 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiUnauthorizedResponse,
+  ApiForbiddenResponse,
 } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RbacGuard } from '../identity/roles/guards/rbac.guard';
+import { Roles } from '../identity/roles/decorators/roles.decorator';
+import { UserRole } from '../identity/roles/enums/user-role.enum';
 import { QueueService } from './queue.service';
 import { ExponentialBackoffService } from './exponential-backoff.service';
 import { DeadLetterQueueService, DLQReason } from './dead-letter-queue.service';
@@ -27,13 +34,15 @@ import { RetryPolicy, DLQConfig, QueueHealthThresholds } from './queue.config';
 /**
  * Admin Dashboard Controller for Queue Management
  * Provides comprehensive monitoring, control, and analytics endpoints
- * Protected by admin role (uncomment guards as needed)
+ * Every route requires an authenticated ADMIN (JwtAuthGuard + RbacGuard + @Roles).
  */
 @ApiTags('queue-admin')
 @ApiBearerAuth()
+@ApiUnauthorizedResponse({ description: 'Missing or invalid access token' })
+@ApiForbiddenResponse({ description: 'Requires ADMIN role' })
+@UseGuards(JwtAuthGuard, RbacGuard)
+@Roles(UserRole.ADMIN)
 @Controller('api/admin/queue')
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles('admin')
 export class QueueAdminController {
   constructor(
     private readonly queueService: QueueService,
