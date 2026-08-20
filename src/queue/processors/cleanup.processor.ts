@@ -10,10 +10,17 @@ import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 import { QueueName } from '../queue.constants';
 import { CleanupJobData } from '../queue.service';
+import {
+  DeadLetterQueueService,
+  DLQReason,
+  isPermanentFailure,
+} from '../dead-letter-queue.service';
 
 @Processor(QueueName.CLEANUP)
 export class CleanupJobProcessor {
   private readonly logger = new Logger(CleanupJobProcessor.name);
+
+  constructor(private readonly dlqService: DeadLetterQueueService) {}
 
   @Process({ concurrency: 1 })
   async processCleanup(job: Job<CleanupJobData>): Promise<void> {
@@ -62,11 +69,25 @@ export class CleanupJobProcessor {
   }
 
   @OnQueueFailed()
-  onFailed(job: Job<CleanupJobData>, error: Error): void {
+  async onFailed(job: Job<CleanupJobData>, error: Error): Promise<void> {
+    const attempts = job.opts.attempts || 3;
     this.logger.error(
-      `Cleanup job ${job.id} failed: ${job.data.type}`,
+      `Cleanup job ${job.id} failed: ${job.data.type}. ` +
+        `Attempt ${job.attemptsMade}/${attempts}`,
       error.stack,
     );
+
+    if (isPermanentFailure(job)) {
+      this.logger.error(
+        `Cleanup job ${job.id} permanently failed: ${job.data.type}.`,
+      );
+      await this.dlqService.addToDLQ(
+        job,
+        error,
+        DLQReason.MAX_RETRIES_EXCEEDED,
+        QueueName.CLEANUP,
+      );
+    }
   }
 
   private async cleanupBatch(jobData: CleanupJobData): Promise<number> {

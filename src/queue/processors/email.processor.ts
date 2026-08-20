@@ -10,10 +10,17 @@ import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 import { QueueName } from '../queue.constants';
 import { EmailJobData } from '../queue.service';
+import {
+  DeadLetterQueueService,
+  DLQReason,
+  isPermanentFailure,
+} from '../dead-letter-queue.service';
 
 @Processor(QueueName.EMAILS)
 export class EmailJobProcessor {
   private readonly logger = new Logger(EmailJobProcessor.name);
+
+  constructor(private readonly dlqService: DeadLetterQueueService) {}
 
   @Process({ concurrency: 3 })
   async processEmail(job: Job<EmailJobData>): Promise<void> {
@@ -70,7 +77,7 @@ export class EmailJobProcessor {
   }
 
   @OnQueueFailed()
-  onFailed(job: Job<EmailJobData>, error: Error): void {
+  async onFailed(job: Job<EmailJobData>, error: Error): Promise<void> {
     const attempts = job.opts.attempts || 3;
     this.logger.error(
       `Email job ${job.id} failed. Subject: ${job.data.subject}. ` +
@@ -78,11 +85,17 @@ export class EmailJobProcessor {
       error.stack,
     );
 
-    if (job.attemptsMade >= attempts) {
+    if (isPermanentFailure(job)) {
       this.logger.error(
         `Email job ${job.id} permanently failed. Subject: ${job.data.subject}`,
       );
       this.notifyAdminOfFailure(job, error);
+      await this.dlqService.addToDLQ(
+        job,
+        error,
+        DLQReason.MAX_RETRIES_EXCEEDED,
+        QueueName.EMAILS,
+      );
     }
   }
 

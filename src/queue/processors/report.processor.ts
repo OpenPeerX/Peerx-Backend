@@ -10,10 +10,17 @@ import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 import { QueueName } from '../queue.constants';
 import { ReportJobData } from '../queue.service';
+import {
+  DeadLetterQueueService,
+  DLQReason,
+  isPermanentFailure,
+} from '../dead-letter-queue.service';
 
 @Processor(QueueName.REPORTS)
 export class ReportJobProcessor {
   private readonly logger = new Logger(ReportJobProcessor.name);
+
+  constructor(private readonly dlqService: DeadLetterQueueService) {}
 
   @Process({ concurrency: 1 })
   async processReport(job: Job<ReportJobData>): Promise<void> {
@@ -59,13 +66,25 @@ export class ReportJobProcessor {
   }
 
   @OnQueueFailed()
-  onFailed(job: Job<ReportJobData>, error: Error): void {
+  async onFailed(job: Job<ReportJobData>, error: Error): Promise<void> {
     const attempts = job.opts.attempts || 2;
     this.logger.error(
       `Report job ${job.id} failed: ${job.data.reportType}. ` +
         `Attempt ${job.attemptsMade}/${attempts}`,
       error.stack,
     );
+
+    if (isPermanentFailure(job)) {
+      this.logger.error(
+        `Report job ${job.id} permanently failed: ${job.data.reportType}.`,
+      );
+      await this.dlqService.addToDLQ(
+        job,
+        error,
+        DLQReason.MAX_RETRIES_EXCEEDED,
+        QueueName.REPORTS,
+      );
+    }
   }
 
   private async fetchReportData(jobData: ReportJobData): Promise<any> {

@@ -275,6 +275,15 @@ sudo apt-get install redis-server
 redis-server
 ```
 
+> **Dead-letter queue**: permanently failed jobs are stored durably in Redis
+> (`dlq:{queueName}` hashes keyed by job id) and survive process restarts.
+> The email, notification, report, and cleanup processors move a job to the
+> DLQ only when it has permanently failed — `attemptsMade >= opts.attempts`
+> — so retryable failures are not recorded. `recoverJob` re-enqueues the job
+> and removes the DLQ entry only after the re-enqueue succeeds, so a failed
+> recovery never loses the record. The admin endpoints under
+> `api/queue/admin/dlq/*` read and write the same durable store.
+
 ### 4. Database Setup
 
 #### Development (SQLite)

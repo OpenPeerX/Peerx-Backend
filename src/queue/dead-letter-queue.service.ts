@@ -4,6 +4,7 @@ import { Job } from 'bull';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
 import { QueueName } from './queue.constants';
+import { RedisPoolService } from '../common/cache/redis-pool.service';
 import { DEFAULT_DLQ_CONFIG, DLQConfig } from './queue.config';
 
 export interface DLQItem {
@@ -28,14 +29,34 @@ export enum DLQReason {
 }
 
 /**
+ * Canonical permanent-vs-retryable rule: a Bull job has permanently failed
+ * once the attempts it has made reach the attempts configured for it.
+ * `@OnQueueFailed` fires on every failed attempt, so processors must use
+ * this check (mirroring `SchedulerFailoverService.canRetryJob`) to decide
+ * when a failure is final and belongs in the DLQ.
+ */
+export function isPermanentFailure(job: Job): boolean {
+  return (job.attemptsMade ?? 0) >= (job.opts.attempts ?? 3);
+}
+
+const DLQ_KEY_PREFIX = 'dlq';
+
+/**
  * Dead Letter Queue Service
- * Handles permanently failed jobs that cannot be retried
- * Maintains history, alerts, and recovery options
+ *
+ * Durable, Redis-backed store of permanently failed jobs. Each queue maps to
+ * a Redis hash (`dlq:{queueName}`) keyed by job id, so DLQ items survive a
+ * process restart and are visible to every instance of a horizontally scaled
+ * deployment — the admin endpoints in `QueueAdminController` read and write
+ * the same store the processors produce.
+ *
+ * Recovery is safe by construction: `recoverJob` re-enqueues the job onto
+ * its original Bull queue first and only removes the DLQ entry after the
+ * re-enqueue succeeds, so a failed recovery never loses the record.
  */
 @Injectable()
 export class DeadLetterQueueService {
   private readonly logger = new Logger(DeadLetterQueueService.name);
-  private dlqItems: Map<string, DLQItem[]> = new Map();
   private dlqConfig: DLQConfig = DEFAULT_DLQ_CONFIG;
   private dlqEventListeners: Set<(item: DLQItem) => void> = new Set();
 
@@ -48,22 +69,17 @@ export class DeadLetterQueueService {
     private reportQueue: Queue,
     @InjectQueue(QueueName.CLEANUP)
     private cleanupQueue: Queue,
+    private readonly redis: RedisPoolService,
   ) {
-    this.initializeDLQ();
-  }
-
-  /**
-   * Initialize DLQ storage
-   */
-  private initializeDLQ(): void {
-    for (const queue of Object.values(QueueName)) {
-      this.dlqItems.set(queue, []);
-    }
     this.startCleanupJob();
   }
 
+  private dlqKey(queueName: string): string {
+    return `${DLQ_KEY_PREFIX}:${queueName}`;
+  }
+
   /**
-   * Add a job to the dead letter queue
+   * Add a job to the dead letter queue (durable).
    */
   async addToDLQ(
     job: Job,
@@ -89,9 +105,13 @@ export class DeadLetterQueueService {
       },
     };
 
-    const queueDLQ = this.dlqItems.get(queueName) || [];
-    queueDLQ.push(dlqItem);
-    this.dlqItems.set(queueName, queueDLQ);
+    await this.redis.withClient((client) =>
+      client.hset(
+        this.dlqKey(queueName),
+        dlqItem.jobId,
+        JSON.stringify(dlqItem),
+      ),
+    );
 
     this.logger.error(
       `Job ${job.id} moved to DLQ - Reason: ${reason}, Error: ${dlqItem.error}`,
@@ -106,6 +126,7 @@ export class DeadLetterQueueService {
     }
 
     // Check if threshold exceeded
+    const queueDLQ = await this.getDLQItems(queueName);
     if (
       queueDLQ.length > this.dlqConfig.alertThreshold &&
       queueDLQ.length % 10 === 0
@@ -119,10 +140,16 @@ export class DeadLetterQueueService {
   }
 
   /**
-   * Retrieve DLQ items for a specific queue
+   * Retrieve DLQ items for a specific queue (oldest first).
    */
-  getDLQItems(queueName: string, limit?: number): DLQItem[] {
-    let items = this.dlqItems.get(queueName) || [];
+  async getDLQItems(queueName: string, limit?: number): Promise<DLQItem[]> {
+    const fields = await this.redis.withClient((client) =>
+      client.hgetall(this.dlqKey(queueName)),
+    );
+    let items = Object.values(fields)
+      .map((raw) => this.deserialize(raw))
+      .filter((item): item is DLQItem => item !== null)
+      .sort((a, b) => a.failedAt.getTime() - b.failedAt.getTime());
     if (limit) {
       items = items.slice(-limit);
     }
@@ -130,12 +157,15 @@ export class DeadLetterQueueService {
   }
 
   /**
-   * Get DLQ statistics
+   * Get DLQ statistics across all queues.
    */
-  getDLQStats(): Record<string, { count: number; oldestItem?: DLQItem }> {
+  async getDLQStats(): Promise<
+    Record<string, { count: number; oldestItem?: DLQItem }>
+  > {
     const stats: Record<string, { count: number; oldestItem?: DLQItem }> = {};
 
-    for (const [queueName, items] of this.dlqItems) {
+    for (const queueName of Object.values(QueueName)) {
+      const items = await this.getDLQItems(queueName);
       stats[queueName] = {
         count: items.length,
         oldestItem: items.length > 0 ? items[0] : undefined,
@@ -146,18 +176,24 @@ export class DeadLetterQueueService {
   }
 
   /**
-   * Attempt to recover and retry a DLQ item
+   * Attempt to recover and retry a DLQ item. Re-enqueues first and only
+   * removes the DLQ entry after the re-enqueue succeeds.
    */
   async recoverJob(queueName: string, jobId: string): Promise<boolean> {
-    const items = this.dlqItems.get(queueName) || [];
-    const itemIndex = items.findIndex((i) => i.jobId === jobId);
-
-    if (itemIndex === -1) {
+    const raw = await this.redis.withClient((client) =>
+      client.hget(this.dlqKey(queueName), jobId),
+    );
+    if (!raw) {
       this.logger.warn(`DLQ item ${jobId} not found in queue ${queueName}`);
       return false;
     }
 
-    const item = items[itemIndex];
+    const item = this.deserialize(raw);
+    if (!item) {
+      this.logger.warn(`DLQ item ${jobId} in queue ${queueName} is corrupt`);
+      return false;
+    }
+
     const queue = this.getQueueByName(queueName);
 
     if (!queue) {
@@ -173,8 +209,10 @@ export class DeadLetterQueueService {
         delay: 0,
       });
 
-      // Remove from DLQ
-      items.splice(itemIndex, 1);
+      // Remove from DLQ only after the re-enqueue succeeded
+      await this.redis.withClient((client) =>
+        client.hdel(this.dlqKey(queueName), jobId),
+      );
 
       this.logger.log(
         `Successfully recovered DLQ job ${jobId} from queue ${queueName}`,
@@ -188,41 +226,44 @@ export class DeadLetterQueueService {
   }
 
   /**
-   * Remove a DLQ item permanently
+   * Remove a DLQ item permanently (durable).
    */
-  removeDLQItem(queueName: string, jobId: string): boolean {
-    const items = this.dlqItems.get(queueName) || [];
-    const itemIndex = items.findIndex((i) => i.jobId === jobId);
-
-    if (itemIndex === -1) {
-      return false;
+  async removeDLQItem(queueName: string, jobId: string): Promise<boolean> {
+    const removed = await this.redis.withClient((client) =>
+      client.hdel(this.dlqKey(queueName), jobId),
+    );
+    if (removed > 0) {
+      this.logger.log(`Removed DLQ item ${jobId} from queue ${queueName}`);
     }
-
-    items.splice(itemIndex, 1);
-    this.logger.log(`Removed DLQ item ${jobId} from queue ${queueName}`);
-
-    return true;
+    return removed > 0;
   }
 
   /**
-   * Clear all DLQ items for a queue
+   * Clear all DLQ items for a queue (durable).
    */
-  clearDLQ(queueName: string): number {
-    const items = this.dlqItems.get(queueName) || [];
-    const count = items.length;
-    this.dlqItems.set(queueName, []);
+  async clearDLQ(queueName: string): Promise<number> {
+    const items = await this.getDLQItems(queueName);
+    await this.redis.withClient((client) => client.del(this.dlqKey(queueName)));
 
-    this.logger.log(`Cleared DLQ for queue ${queueName} (${count} items)`);
+    this.logger.log(
+      `Cleared DLQ for queue ${queueName} (${items.length} items)`,
+    );
 
-    return count;
+    return items.length;
   }
 
   /**
-   * Get a DLQ item by ID
+   * Get a DLQ item by ID.
    */
-  getDLQItem(queueName: string, jobId: string): DLQItem | undefined {
-    const items = this.dlqItems.get(queueName) || [];
-    return items.find((i) => i.jobId === jobId);
+  async getDLQItem(
+    queueName: string,
+    jobId: string,
+  ): Promise<DLQItem | undefined> {
+    const raw = await this.redis.withClient((client) =>
+      client.hget(this.dlqKey(queueName), jobId),
+    );
+    const item = raw ? this.deserialize(raw) : undefined;
+    return item ?? undefined;
   }
 
   /**
@@ -256,6 +297,18 @@ export class DeadLetterQueueService {
 
   // ==================== Private Methods ====================
 
+  private deserialize(raw: string): DLQItem | null {
+    try {
+      const parsed = JSON.parse(raw) as DLQItem;
+      // failedAt round-trips as an ISO string through JSON; restore a Date.
+      parsed.failedAt = new Date(parsed.failedAt);
+      return parsed;
+    } catch {
+      this.logger.warn(`Ignoring corrupt DLQ entry: ${raw.slice(0, 80)}`);
+      return null;
+    }
+  }
+
   private notifyDLQListeners(item: DLQItem): void {
     this.dlqEventListeners.forEach((callback) => {
       try {
@@ -275,31 +328,46 @@ export class DeadLetterQueueService {
   }
 
   private startCleanupJob(): void {
-    // Clean up old DLQ items periodically
-    setInterval(
+    // Clean up old DLQ items periodically against the durable store.
+    // unref() so the timer does not keep the process (or jest) alive.
+    const timer = setInterval(
       () => {
-        const cutoffTime = Date.now() - this.dlqConfig.maxAge;
-
-        for (const [queueName, items] of this.dlqItems) {
-          const beforeCount = items.length;
-          const filtered = items.filter(
-            (item) => item.failedAt.getTime() > cutoffTime,
-          );
-          this.dlqItems.set(queueName, filtered);
-
-          if (filtered.length < beforeCount) {
-            this.logger.debug(
-              `Cleaned up ${beforeCount - filtered.length} old DLQ items from ${queueName}`,
-            );
-          }
-        }
+        this.cleanupExpiredItems().catch((error) => {
+          this.logger.error('DLQ cleanup sweep failed:', error);
+        });
       },
       60 * 60 * 1000,
     ); // Run every hour
+    timer.unref();
+  }
+
+  private async cleanupExpiredItems(): Promise<void> {
+    const cutoffTime = Date.now() - this.dlqConfig.maxAge;
+
+    for (const queueName of Object.values(QueueName)) {
+      const fields = await this.redis.withClient((client) =>
+        client.hgetall(this.dlqKey(queueName)),
+      );
+      const staleIds = Object.entries(fields)
+        .filter(([, raw]) => {
+          const item = this.deserialize(raw);
+          return item !== null && item.failedAt.getTime() <= cutoffTime;
+        })
+        .map(([jobId]) => jobId);
+
+      if (staleIds.length > 0) {
+        await this.redis.withClient((client) =>
+          client.hdel(this.dlqKey(queueName), ...staleIds),
+        );
+        this.logger.debug(
+          `Cleaned up ${staleIds.length} old DLQ items from ${queueName}`,
+        );
+      }
+    }
   }
 
   private getQueueByName(queueName: string): Queue | null {
-    switch (queueName) {
+    switch (queueName as QueueName) {
       case QueueName.NOTIFICATIONS:
         return this.notificationQueue;
       case QueueName.EMAILS:

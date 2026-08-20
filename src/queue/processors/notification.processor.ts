@@ -10,11 +10,18 @@ import { Logger } from '@nestjs/common';
 import type { Job } from 'bull';
 import { QueueName } from '../queue.constants';
 import { NotificationJobData } from '../queue.service';
+import {
+  DeadLetterQueueService,
+  DLQReason,
+  isPermanentFailure,
+} from '../dead-letter-queue.service';
 
 @Processor(QueueName.NOTIFICATIONS)
 export class NotificationJobProcessor {
   private readonly logger = new Logger(NotificationJobProcessor.name);
   private readonly concurrency = 5;
+
+  constructor(private readonly dlqService: DeadLetterQueueService) {}
 
   @Process({ concurrency: 5 })
   async processNotification(job: Job<NotificationJobData>): Promise<void> {
@@ -68,7 +75,7 @@ export class NotificationJobProcessor {
   }
 
   @OnQueueFailed()
-  onFailed(job: Job<NotificationJobData>, error: Error): void {
+  async onFailed(job: Job<NotificationJobData>, error: Error): Promise<void> {
     const attempts = job.opts.attempts || 3;
     this.logger.error(
       `Job ${job.id} failed for user ${job.data.userId}. ` +
@@ -76,9 +83,15 @@ export class NotificationJobProcessor {
       error.stack,
     );
 
-    if (job.attemptsMade >= attempts) {
+    if (isPermanentFailure(job)) {
       this.logger.error(
         `Job ${job.id} permanently failed after ${job.attemptsMade} attempts.`,
+      );
+      await this.dlqService.addToDLQ(
+        job,
+        error,
+        DLQReason.MAX_RETRIES_EXCEEDED,
+        QueueName.NOTIFICATIONS,
       );
     }
   }
