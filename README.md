@@ -280,6 +280,19 @@ sudo apt-get install redis-server
 redis-server
 ```
 
+> **Swap jobs**: the `swaps` Bull queue is consumed by `SwapJobProcessor`,
+> which executes jobs against the AMM path (`LiquidityPoolService.swap`).
+> Each job carries a `poolId` (the AMM pool to execute against) and an
+> optional `minAmountOut`; jobs without a `poolId` fail as non-retryable and
+> land in the dead-letter queue. Execution is guarded by a durable Redis
+> idempotency key (`swap:executed:{swapId}`) so a Bull retry never executes
+> a completed swap twice. `multi_leg` jobs execute legs sequentially and
+> resume at the first unexecuted leg on retry (completed legs are never
+> re-executed and are not rolled back). `batch` jobs are best-effort: every
+> sub-swap is attempted independently, successes are kept, and the job
+> fails only if any sub-swap fails, with the retry re-attempting just the
+> failed ones.
+
 > **Zero-loss messaging**: the queue's zero-loss message service persists
 > message state (payloads, attempts, processing leases, replication targets)
 > in Redis under the `zls:*` key namespace. All state survives process

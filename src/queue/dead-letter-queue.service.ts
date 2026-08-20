@@ -48,6 +48,8 @@ export class DeadLetterQueueService {
     private reportQueue: Queue,
     @InjectQueue(QueueName.CLEANUP)
     private cleanupQueue: Queue,
+    @InjectQueue(QueueName.SWAPS)
+    private swapQueue: Queue,
   ) {
     this.initializeDLQ();
   }
@@ -299,7 +301,7 @@ export class DeadLetterQueueService {
   }
 
   private getQueueByName(queueName: string): Queue | null {
-    switch (queueName) {
+    switch (queueName as QueueName) {
       case QueueName.NOTIFICATIONS:
         return this.notificationQueue;
       case QueueName.EMAILS:
@@ -308,6 +310,8 @@ export class DeadLetterQueueService {
         return this.reportQueue;
       case QueueName.CLEANUP:
         return this.cleanupQueue;
+      case QueueName.SWAPS:
+        return this.swapQueue;
       default:
         return null;
     }

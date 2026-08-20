@@ -6,6 +6,7 @@ import { NotificationJobProcessor } from './processors/notification.processor';
 import { EmailJobProcessor } from './processors/email.processor';
 import { ReportJobProcessor } from './processors/report.processor';
 import { CleanupJobProcessor } from './processors/cleanup.processor';
+import { SwapJobProcessor } from './processors/swap.processor';
 import { QueueService } from './queue.service';
 import { QueueMonitoringService } from './queue-monitoring.service';
 import { SchedulerService } from './scheduler.service';
@@ -20,6 +21,7 @@ import { UserModule } from '../user/user.module';
 import { AuthModule } from '../auth/auth.module';
 import { RolesModule } from '../identity/roles/roles.module';
 import { CustomCacheModule } from '../common/cache/cache.module';
+import { ExchangeModule } from '../exchange/exchange.module';
 import { QueueName } from './queue.constants';
 
 @Module({
@@ -116,6 +118,9 @@ import { QueueName } from './queue.constants';
 
     CustomCacheModule,
     UserModule,
+    // Provides LiquidityPoolService — the AMM swap path the SwapJobProcessor
+    // executes swap jobs against.
+    ExchangeModule,
     AuthModule,
     RolesModule,
   ],
@@ -125,6 +130,7 @@ import { QueueName } from './queue.constants';
     EmailJobProcessor,
     ReportJobProcessor,
     CleanupJobProcessor,
+    SwapJobProcessor,
     QueueService,
     QueueMonitoringService,
     SchedulerService,
