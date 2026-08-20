@@ -688,6 +688,44 @@ We welcome contributions! Please follow these steps:
 
 ---
 
+## 🛡️ Insurance fund concurrency model
+
+Insurance fund payouts must never double-spend a balance. Two rules are
+enforced in code so every future payout follows the same pattern:
+
+1. **Balance changes are single atomic UPDATEs, never read-modify-write.**
+   `InsuranceFundService.recordTransaction()` applies payouts as
+   `UPDATE insurance_funds SET balance = balance - :amount WHERE id = :id AND
+   balance >= :amount` and checks the affected-row count. If the guard fails
+   (insufficient balance — from the start or because a concurrent payout
+   drained the fund first), the payout is rejected with
+   `BadRequestException('Insufficient fund balance for payout')` and the
+   balance can never go negative. Replenishments and fee contributions use
+   the same unconditional atomic `balance + :amount` update.
+2. **Multi-tier coverage runs in one transaction with a fixed lock order.**
+   `LiquidationProtectionService.coverShortfall()` debits tiers in the fixed
+   `TIER_PRIORITY` order (LOW → MEDIUM → HIGH → CRITICAL) inside a single
+   `dataSource.transaction()`. Concurrent liquidations acquire fund row locks
+   in the same order, so they serialize instead of deadlocking, and the
+   liquidation event row is committed together with the debits. Health
+   recalculation and domain events run only after commit, so they never
+   observe a rolled-back transaction.
+
+Partial coverage is an explicit outcome, not a swallowed error: when no tier
+has enough balance, the liquidation event is persisted with
+`status = 'PARTIAL'` and a `liquidation.shortfall` event is emitted with
+`cascadePrevented: false`. A tier with no initialized fund is skipped; every
+other failure aborts the transaction and propagates.
+
+The concurrency tests live in `src/protection/insurance-fund-concurrency.spec.ts`
+(two real SQLite connections on one file database, WAL mode — SQLite's MVCC,
+which models Postgres row-lock semantics). They prove that two concurrent
+payouts exceeding the balance yield exactly one success and one rejection with
+no negative balance, and that concurrent `coverShortfall` calls never deadlock
+or overdraw.
+
+---
+
 ## 📄 License
 
 This project is licensed under the **UNLICENSED** license. See the [LICENSE](./LICENSE) file for details.
