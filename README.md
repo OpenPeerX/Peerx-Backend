@@ -484,6 +484,21 @@ npm run migration:revert
 - **Swagger UI**: `http://localhost:3000/api/docs`
 - **OpenAPI Spec**: `http://localhost:3000/api/docs-json`
 
+#### Queue Management API
+
+The queue subsystem exposes two controller groups, both protected by JWT
+authentication (`JwtAuthGuard`) and documented with `@ApiBearerAuth()`:
+
+| Endpoint group | Auth requirement |
+| --- | --- |
+| `GET api/queue/metrics*`, `GET api/queue/health` | Any authenticated user (valid access token) |
+| `POST/DELETE api/queue/jobs/*`, `POST api/queue/pause/*`, `POST api/queue/resume/*`, `DELETE api/queue/empty/*`, `POST api/queue/trigger/*`, `POST api/queue/test/*` | Authenticated user with `ADMIN` role (`RbacGuard` + `@Roles(UserRole.ADMIN)`) |
+| All `api/admin/queue/*` routes (dashboard, metrics, health, DLQ, retry policies, control, jobs) | Authenticated user with `ADMIN` role |
+
+Non-admin callers receive `403 Forbidden` on admin-only routes; unauthenticated
+callers receive `401 Unauthorized` on every queue route. `SUPER_ADMIN` inherits
+`ADMIN` privileges through the RBAC hierarchy.
+
 ### GraphQL API
 
 - **GraphQL Playground**: `http://localhost:3000/graphql`
