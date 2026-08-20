@@ -92,7 +92,7 @@
     "speakeasy": "^2.0.0",
     "sqlite3": "^5.1.7",
     "stellar-sdk": "^13.3.0",
-    "twilio": "^5.3.0",
+    "twilio": "^6.1.0",
     "typeorm": "^0.3.27",
     "uuid": "^14.0.0",
     "winston": "^3.11.0",
