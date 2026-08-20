@@ -69,6 +69,8 @@ export class DeadLetterQueueService {
     private reportQueue: Queue,
     @InjectQueue(QueueName.CLEANUP)
     private cleanupQueue: Queue,
+    @InjectQueue(QueueName.SWAPS)
+    private swapQueue: Queue,
     private readonly redis: RedisPoolService,
   ) {
     this.startCleanupJob();
@@ -376,6 +378,8 @@ export class DeadLetterQueueService {
         return this.reportQueue;
       case QueueName.CLEANUP:
         return this.cleanupQueue;
+      case QueueName.SWAPS:
+        return this.swapQueue;
       default:
         return null;
     }

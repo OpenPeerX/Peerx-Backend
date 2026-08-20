@@ -11,13 +11,12 @@ import { ConfigService } from '@nestjs/config';
 import type { Job } from 'bull';
 import * as nodemailer from 'nodemailer';
 import { QueueName } from '../queue.constants';
-import { EmailJobData } from '../queue.service';
-import {
+import { EmailJobData } from '../queue.service';import {
   DeadLetterQueueService,
   DLQReason,
   isPermanentFailure,
 } from '../dead-letter-queue.service';
-import { RedisPoolService } from '../../common/cache/redis-pool.service';
+  import { RedisPoolService } from '../../common/cache/redis-pool.service';
 import { renderEmailTemplate } from '../../notifications/templates/email.templates';
 
 /**

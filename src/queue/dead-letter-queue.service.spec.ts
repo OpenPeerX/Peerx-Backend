@@ -81,6 +81,7 @@ describe('DeadLetterQueueService', () => {
       queues[QueueName.EMAILS] as unknown as Queue,
       queues[QueueName.REPORTS] as unknown as Queue,
       queues[QueueName.CLEANUP] as unknown as Queue,
+      queues[QueueName.SWAPS] as unknown as Queue,
       provider.useValue as unknown as RedisPoolService,
     );
     return svc;
