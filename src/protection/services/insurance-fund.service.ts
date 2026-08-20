@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { InsuranceFund } from '../entities/insurance-fund.entity';
 import { InsuranceFundTier } from '../entities/insurance-fund-tier.entity';
 import { InsuranceTransaction } from '../entities/insurance-transaction.entity';
@@ -54,6 +54,13 @@ export const DEFAULT_TIERS: Array<{
     targetReserve: 1000000,
   },
 ];
+
+export interface InsuranceTransactionOptions {
+  referenceId?: string;
+  userId?: number;
+  description?: string;
+  metadata?: Record<string, unknown>;
+}
 
 @Injectable()
 export class InsuranceFundService {
@@ -106,8 +113,18 @@ export class InsuranceFundService {
     return funds;
   }
 
-  async getFund(fundId: number): Promise<InsuranceFund> {
-    const fund = await this.fundRepo.findOne({
+  /**
+   * Load a fund. Pass a transaction `manager` to read inside an open
+   * transaction (used by multi-tier coverage in LiquidationProtectionService).
+   */
+  async getFund(
+    fundId: number,
+    manager?: EntityManager,
+  ): Promise<InsuranceFund> {
+    const fundRepo = manager
+      ? manager.getRepository(InsuranceFund)
+      : this.fundRepo;
+    const fund = await fundRepo.findOne({
       where: { id: fundId },
       relations: ['tier'],
     });
@@ -145,37 +162,83 @@ export class InsuranceFundService {
     return this.tierRepo.find({ order: { id: 'ASC' } });
   }
 
+  /**
+   * Record a balance-changing transaction.
+   *
+   * The balance mutation is a single conditional UPDATE (`balance = balance -/+
+   * :amount`), never a read-modify-write in application memory, so concurrent
+   * payouts can never spend the same balance twice: the payout guard
+   * `balance >= amount` is evaluated by the database while holding the row
+   * lock, and an unapplied update means the caller lost the race.
+   *
+   * Pass a transaction `manager` when this call participates in an outer
+   * transaction (see LiquidationProtectionService.coverShortfall). Without
+   * one, the debit, the audit row and the health refresh run in a transaction
+   * of their own.
+   */
   async recordTransaction(
     fundId: number,
     type: InsuranceTxType,
     amount: number,
-    options: {
-      referenceId?: string;
-      userId?: number;
-      description?: string;
-      metadata?: Record<string, unknown>;
-    } = {},
+    options: InsuranceTransactionOptions = {},
+    manager?: EntityManager,
   ): Promise<{ fund: InsuranceFund; transaction: InsuranceTransaction }> {
-    const fund = await this.getFund(fundId);
-    const balanceBefore = Number(fund.balance);
-
-    let balanceAfter: number;
-    if (type === InsuranceTxType.PAYOUT && balanceBefore < amount) {
-      throw new BadRequestException('Insufficient fund balance for payout');
+    if (manager) {
+      return this.executeRecordTransaction(
+        manager,
+        fundId,
+        type,
+        amount,
+        options,
+      );
     }
 
-    if (type === InsuranceTxType.PAYOUT) {
-      balanceAfter = balanceBefore - amount;
-    } else {
-      balanceAfter = balanceBefore + amount;
-    }
+    const result = await this.fundRepo.manager.transaction((m) =>
+      this.executeRecordTransaction(m, fundId, type, amount, options),
+    );
 
-    fund.balance = balanceAfter;
-    const savedFund = await this.fundRepo.save(fund);
+    // Health is refreshed after commit so the recalculation reads the
+    // committed balance rather than the pre-transaction snapshot.
     await this.fundHealthService.updateFundHealth(fundId);
 
-    const transaction = await this.txRepo.save(
-      this.txRepo.create({
+    return result;
+  }
+
+  private async executeRecordTransaction(
+    manager: EntityManager,
+    fundId: number,
+    type: InsuranceTxType,
+    amount: number,
+    options: InsuranceTransactionOptions = {},
+  ): Promise<{ fund: InsuranceFund; transaction: InsuranceTransaction }> {
+    const fundRepo = manager.getRepository(InsuranceFund);
+    const txRepo = manager.getRepository(InsuranceTransaction);
+
+    if (type === InsuranceTxType.PAYOUT) {
+      const debited = await this.debitBalance(fundRepo, fundId, amount);
+      if (!debited) {
+        throw new BadRequestException('Insufficient fund balance for payout');
+      }
+    } else {
+      await this.creditBalance(fundRepo, fundId, amount);
+    }
+
+    const fund = await fundRepo.findOne({
+      where: { id: fundId },
+      relations: ['tier'],
+    });
+    if (!fund) {
+      throw new NotFoundException(`Insurance fund ${fundId} not found`);
+    }
+
+    const balanceAfter = Number(fund.balance);
+    const balanceBefore =
+      type === InsuranceTxType.PAYOUT
+        ? balanceAfter + amount
+        : balanceAfter - amount;
+
+    const transaction = await txRepo.save(
+      txRepo.create({
         fundId,
         type,
         amount,
@@ -188,7 +251,43 @@ export class InsuranceFundService {
       }),
     );
 
-    return { fund: savedFund, transaction };
+    return { fund, transaction };
+  }
+
+  /**
+   * Atomic conditional debit: `UPDATE insurance_fund SET balance = balance -
+   * :amount WHERE id = :id AND balance >= :amount`. Returns whether a row was
+   * updated — a false result means the balance is insufficient (either from
+   * the start or because a concurrent payout drained the fund first).
+   */
+  private async debitBalance(
+    fundRepo: Repository<InsuranceFund>,
+    fundId: number,
+    amount: number,
+  ): Promise<boolean> {
+    const debit = Number(amount);
+    const result = await fundRepo
+      .createQueryBuilder()
+      .update(InsuranceFund)
+      .set({ balance: () => `"balance" - ${debit}` })
+      .where('id = :id AND balance >= :amount', { id: fundId, amount: debit })
+      .execute();
+    return (result.affected ?? 0) > 0;
+  }
+
+  /** Atomic unconditional credit (replenishments and fee contributions). */
+  private async creditBalance(
+    fundRepo: Repository<InsuranceFund>,
+    fundId: number,
+    amount: number,
+  ): Promise<void> {
+    const credit = Number(amount);
+    await fundRepo
+      .createQueryBuilder()
+      .update(InsuranceFund)
+      .set({ balance: () => `"balance" + ${credit}` })
+      .where('id = :id', { id: fundId })
+      .execute();
   }
 
   async replenishFund(

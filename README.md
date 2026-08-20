@@ -79,6 +79,11 @@ To provide a secure, efficient, and user-centric trading experience with built-i
 - USDC stablecoin integration
 - On-chain settlement verification
 - Ethereum compatibility (ERC-20 tokens)
+- Cross-chain bridge with signer-bound multisig approvals: each bridge
+  transfer requires `BRIDGE_MULTISIG_THRESHOLD` distinct authorized signers
+  (configured via `BRIDGE_SIGNER_IDS`), each signer can approve a bridge at
+  most once, and approvals are recorded per signer in `bridge_approvals`
+  with a unique `(bridgeId, signerId)` constraint
 
 ### 📧 **Communication**
 - Email notifications via Nodemailer
@@ -288,6 +293,14 @@ redis-server
 > fails only if any sub-swap fails, with the retry re-attempting just the
 > failed ones.
 
+> **Zero-loss messaging**: the queue's zero-loss message service persists
+> message state (payloads, attempts, processing leases, replication targets)
+> in Redis under the `zls:*` key namespace. All state survives process
+> restarts and is shared across horizontally scaled instances. A background
+> recovery sweep re-queues messages whose processing lease expired (worker
+> crash) exactly once, so Redis must be reachable for zero-loss guarantees
+> to hold.
+
 ### 4. Database Setup
 
 #### Development (SQLite)
@@ -347,17 +360,23 @@ STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
 STELLAR_USDC_ISSUER=GBDT5...
 STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 
+# Cross-chain bridge multisig
+BRIDGE_MULTISIG_THRESHOLD=2        # distinct signers required to execute a bridge
+BRIDGE_SIGNER_IDS=                 # comma-separated user ids authorized to approve (empty = approvals disabled)
+
 # External Services
 EXCHANGE_RATE_URL=https://api.exchangerate-api.com/v4/latest
 TWILIO_ACCOUNT_SID=your_sid
 TWILIO_AUTH_TOKEN=your_token
 TWILIO_PHONE_NUMBER=+1234567890
 
-# Email
+# Email (SMTP)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
+SMTP_SECURE=false
 SMTP_USER=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
+EMAIL_FROM=notifications@peerx.com
 
 # GraphQL
 GRAPHQL_PLAYGROUND=true
@@ -367,6 +386,19 @@ GRAPHQL_INTROSPECTION=true
 CACHE_TTL=300
 CACHE_ENABLED=true
 ```
+
+**Email template resolution**: the email job processor renders the `template`
+field of an email job from the registry in
+`src/notifications/templates/email.templates.ts`. Supported template names are
+`welcome`, `trade-completed`, and `test`; placeholders use `{{key}}` syntax
+(the same convention as the i18n templates) and are HTML-escaped. Unknown
+template names fall back to a generic template instead of failing the job.
+
+**Idempotent email delivery**: each email is sent at most once, guarded by an
+atomic Redis `SET ... NX EX` marker keyed by `emailId` (recipients + subject +
+template). A Bull retry or a duplicate enqueue of an already-sent email is
+skipped; only genuinely failed sends (where the SMTP transport threw) release
+the marker and are re-sent by the queue's backoff.
 
 ### Optional Variables
 
@@ -496,6 +528,21 @@ npm run migration:revert
 
 - **Swagger UI**: `http://localhost:3000/api/docs`
 - **OpenAPI Spec**: `http://localhost:3000/api/docs-json`
+
+#### Queue Management API
+
+The queue subsystem exposes two controller groups, both protected by JWT
+authentication (`JwtAuthGuard`) and documented with `@ApiBearerAuth()`:
+
+| Endpoint group | Auth requirement |
+| --- | --- |
+| `GET api/queue/metrics*`, `GET api/queue/health` | Any authenticated user (valid access token) |
+| `POST/DELETE api/queue/jobs/*`, `POST api/queue/pause/*`, `POST api/queue/resume/*`, `DELETE api/queue/empty/*`, `POST api/queue/trigger/*`, `POST api/queue/test/*` | Authenticated user with `ADMIN` role (`RbacGuard` + `@Roles(UserRole.ADMIN)`) |
+| All `api/admin/queue/*` routes (dashboard, metrics, health, DLQ, retry policies, control, jobs) | Authenticated user with `ADMIN` role |
+
+Non-admin callers receive `403 Forbidden` on admin-only routes; unauthenticated
+callers receive `401 Unauthorized` on every queue route. `SUPER_ADMIN` inherits
+`ADMIN` privileges through the RBAC hierarchy.
 
 ### GraphQL API
 
@@ -698,6 +745,44 @@ We welcome contributions! Please follow these steps:
 | `npm run migration:run` | Run pending migrations |
 | `npm run migration:revert` | Revert last migration |
 | `npm run audit:deps` | Audit dependencies for vulnerabilities |
+
+---
+
+## 🛡️ Insurance fund concurrency model
+
+Insurance fund payouts must never double-spend a balance. Two rules are
+enforced in code so every future payout follows the same pattern:
+
+1. **Balance changes are single atomic UPDATEs, never read-modify-write.**
+   `InsuranceFundService.recordTransaction()` applies payouts as
+   `UPDATE insurance_funds SET balance = balance - :amount WHERE id = :id AND
+   balance >= :amount` and checks the affected-row count. If the guard fails
+   (insufficient balance — from the start or because a concurrent payout
+   drained the fund first), the payout is rejected with
+   `BadRequestException('Insufficient fund balance for payout')` and the
+   balance can never go negative. Replenishments and fee contributions use
+   the same unconditional atomic `balance + :amount` update.
+2. **Multi-tier coverage runs in one transaction with a fixed lock order.**
+   `LiquidationProtectionService.coverShortfall()` debits tiers in the fixed
+   `TIER_PRIORITY` order (LOW → MEDIUM → HIGH → CRITICAL) inside a single
+   `dataSource.transaction()`. Concurrent liquidations acquire fund row locks
+   in the same order, so they serialize instead of deadlocking, and the
+   liquidation event row is committed together with the debits. Health
+   recalculation and domain events run only after commit, so they never
+   observe a rolled-back transaction.
+
+Partial coverage is an explicit outcome, not a swallowed error: when no tier
+has enough balance, the liquidation event is persisted with
+`status = 'PARTIAL'` and a `liquidation.shortfall` event is emitted with
+`cascadePrevented: false`. A tier with no initialized fund is skipped; every
+other failure aborts the transaction and propagates.
+
+The concurrency tests live in `src/protection/insurance-fund-concurrency.spec.ts`
+(two real SQLite connections on one file database, WAL mode — SQLite's MVCC,
+which models Postgres row-lock semantics). They prove that two concurrent
+payouts exceeding the balance yield exactly one success and one rejection with
+no negative balance, and that concurrent `coverShortfall` calls never deadlock
+or overdraw.
 
 ---
 

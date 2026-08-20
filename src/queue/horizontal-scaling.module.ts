@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CustomCacheModule } from '../common/cache/cache.module';
 import { QueueWorkerManagerService } from './queue-worker-manager.service';
 import { QueueLoadBalancerService } from './queue-load-balancer.service';
 import { QueueFaultToleranceService } from './queue-fault-tolerance.service';
@@ -23,6 +24,9 @@ import { HorizontalScalingController } from './horizontal-scaling.controller';
     ConfigModule,
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
+    // Provides RedisPoolService — the durable store backing the zero-loss
+    // message layer (same Redis infrastructure Bull already uses).
+    CustomCacheModule,
   ],
   controllers: [HorizontalScalingController],
   providers: [

@@ -92,6 +92,7 @@ import { MarginModule } from './margin/margin.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { CrossChainBridgeModule } from './blockchain/cross-chain-bridge.module';
 import { CrossChainBridge } from './blockchain/entities/cross-chain-bridge.entity';
+import { BridgeApproval } from './blockchain/entities/bridge-approval.entity';
 import { BlockchainTransaction } from './blockchain/entities/blockchain-transaction.entity';
 import { WalletAddress } from './blockchain/entities/wallet-address.entity';
 
@@ -183,6 +184,7 @@ import { CopySubscription } from './social-trading/entities/copy-subscription.en
           LiquidationEvent,
           // Blockchain — Cross-Chain Bridge (issue #386)
           CrossChainBridge,
+          BridgeApproval,
           BlockchainTransaction,
           WalletAddress,
           // Social Trading (issue #396)

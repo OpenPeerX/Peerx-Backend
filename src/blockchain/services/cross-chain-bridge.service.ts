@@ -1,31 +1,51 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   CrossChainBridge,
   BridgeStatus,
 } from '../entities/cross-chain-bridge.entity';
+import { BridgeApproval } from '../entities/bridge-approval.entity';
 import { BlockchainNetwork } from '../entities/blockchain-transaction.entity';
 import { BlockchainException } from '../../error/exceptions/blockchain.exception';
 import { StellarService } from './stellar.service';
 
 const BRIDGE_RESERVE_THRESHOLD = 10_000;
 
+/** Postgres unique-violation code and SQLite constraint codes/messages. */
+function isUniqueConstraintViolation(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const code = (err as { code?: string }).code;
+  if (code === '23505' || code === 'SQLITE_CONSTRAINT') return true;
+  return /UNIQUE constraint failed/i.test((err as Error).message ?? '');
+}
+
 @Injectable()
 export class CrossChainBridgeService {
   private readonly logger = new Logger(CrossChainBridgeService.name);
   private readonly multisigThreshold: number;
+  private readonly authorizedSigners: ReadonlySet<string>;
 
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(CrossChainBridge)
     private readonly bridgeRepo: Repository<CrossChainBridge>,
     private readonly stellarService: StellarService,
+    private readonly dataSource: DataSource,
   ) {
     this.multisigThreshold = this.configService.get<number>(
       'BRIDGE_MULTISIG_THRESHOLD',
       2,
+    );
+    // Comma-separated list of user ids permitted to approve bridge transfers.
+    // Empty by default => approvals are rejected until signers are configured.
+    const raw = this.configService.get<string>('BRIDGE_SIGNER_IDS', '');
+    this.authorizedSigners = new Set(
+      raw
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean),
     );
   }
 
@@ -52,33 +72,101 @@ export class CrossChainBridgeService {
     return this.bridgeRepo.save(record);
   }
 
-  async addApproval(bridgeId: string): Promise<CrossChainBridge> {
-    const bridge = await this.bridgeRepo.findOne({ where: { id: bridgeId } });
-    if (!bridge)
+  async addApproval(
+    bridgeId: string,
+    signerId: string,
+  ): Promise<CrossChainBridge> {
+    if (!this.authorizedSigners.has(signerId)) {
       throw BlockchainException.transactionFailed({
-        reason: 'Bridge record not found',
+        reason: 'Signer is not authorized to approve this bridge',
         bridgeId,
-      });
-
-    if (
-      bridge.status !== BridgeStatus.INITIATED &&
-      bridge.status !== BridgeStatus.SOURCE_CONFIRMED
-    ) {
-      throw BlockchainException.transactionFailed({
-        reason: 'Bridge is not awaiting approvals',
-        bridgeId,
+        signerId,
       });
     }
 
-    bridge.multisigApprovals += 1;
+    const outcome = await this.dataSource.transaction(async (manager) => {
+      const bridge = await manager.findOne(CrossChainBridge, {
+        where: { id: bridgeId },
+      });
+      if (!bridge) {
+        throw BlockchainException.transactionFailed({
+          reason: 'Bridge record not found',
+          bridgeId,
+        });
+      }
 
-    if (bridge.multisigApprovals >= bridge.multisigThreshold) {
-      bridge.status = BridgeStatus.BRIDGE_PROCESSING;
-      await this.bridgeRepo.save(bridge);
-      return this.executeBridge(bridge);
+      if (
+        bridge.status !== BridgeStatus.INITIATED &&
+        bridge.status !== BridgeStatus.SOURCE_CONFIRMED
+      ) {
+        throw BlockchainException.transactionFailed({
+          reason: 'Bridge is not awaiting approvals',
+          bridgeId,
+        });
+      }
+
+      // Record the approval. The unique (bridgeId, signerId) constraint is the
+      // hard guarantee against double-approval even under concurrent requests.
+      const approvalRepo = manager.getRepository(BridgeApproval);
+      try {
+        await approvalRepo.save(approvalRepo.create({ bridgeId, signerId }));
+      } catch (err) {
+        if (isUniqueConstraintViolation(err)) {
+          throw BlockchainException.transactionFailed({
+            reason: 'Signer has already approved this bridge',
+            bridgeId,
+            signerId,
+          });
+        }
+        throw err;
+      }
+
+      // Atomic increment — no read-modify-write, so parallel approvals can
+      // never overwrite each other's counter regardless of driver locking.
+      await manager
+        .createQueryBuilder()
+        .update(CrossChainBridge)
+        .set({ multisigApprovals: () => 'multisigApprovals + 1' })
+        .where('id = :id', { id: bridgeId })
+        .execute();
+
+      const updated = await manager.findOne(CrossChainBridge, {
+        where: { id: bridgeId },
+      });
+      if (!updated) {
+        throw BlockchainException.transactionFailed({
+          reason: 'Bridge record not found',
+          bridgeId,
+        });
+      }
+
+      if (updated.multisigApprovals < updated.multisigThreshold) {
+        return { bridge: updated, shouldExecute: false };
+      }
+
+      // Conditional status flip: only one concurrent transaction can move the
+      // bridge out of the awaiting-approvals states, guaranteeing executeBridge
+      // runs exactly once even when the threshold is crossed in parallel.
+      const flip = await manager
+        .createQueryBuilder()
+        .update(CrossChainBridge)
+        .set({ status: BridgeStatus.BRIDGE_PROCESSING })
+        .where('id = :id', { id: bridgeId })
+        .andWhere('status IN (:...statuses)', {
+          statuses: [BridgeStatus.INITIATED, BridgeStatus.SOURCE_CONFIRMED],
+        })
+        .execute();
+
+      return {
+        bridge: { ...updated, status: BridgeStatus.BRIDGE_PROCESSING },
+        shouldExecute: (flip.affected ?? 0) > 0,
+      };
+    });
+
+    if (outcome.shouldExecute) {
+      return this.executeBridge(outcome.bridge);
     }
-
-    return this.bridgeRepo.save(bridge);
+    return outcome.bridge;
   }
 
   private async executeBridge(
